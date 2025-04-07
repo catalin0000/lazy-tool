@@ -3,7 +3,7 @@ import sys
 import argparse
 from pathlib import Path
 import yaml
-
+import time
 
 class Color:
     GREEN = '\033[92m'
@@ -67,9 +67,11 @@ def process_host(host_config):
         # print(scan)
 
         if len(scan_file) == 0:
-            scan_file = f'sudo nmap {scan.get('nmap_args', '-T4')} -oN segtest/{scan['scan_name']} {scan['target']}'
+            scan_file = f'sudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan['scan_name']}.tcp {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan['scan_name']}.udp {scan['target']}'
         else:
-            scan_file += f' \nsudo nmap {scan.get('nmap_args', '-T4')} -oN segtest/{scan['scan_name']} {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan['scan_name']}.tcp {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan['scan_name']}.udp {scan['target']}'
 
     return scan_file
 
@@ -212,15 +214,17 @@ def start_nmaps(scan_file, host):
     print(f"Results will be saved to ~/segtest directory on the remote host.")
     print(f"\nTo attach to the tmux session: \nssh {host_name} && tmux attach -t seg-scans")
 
+def checker(host):
+    for targets in host['scans']:
 
-def run_nmap_in_tmux(host, scan_target, scan_args):
-    """Run nmap scan in a new tmux session on remote host"""
-    tmux_cmd = f"""ssh {host} 'tmux new-session -d -s nmap_scan "nmap {scan_args} {scan_target} -oN ~/nmap_scan_results.txt"'"""
-    print(f"Starting nmap scan in tmux session on {host}...")
-    subprocess.run(tmux_cmd, shell=True)
-    print(f"Scan started in tmux session 'nmap_scan' on {host}")
-    print(f"Results will be saved to ~/nmap_scan_results.txt on the remote host")
-    print(f"\nTo attach to the tmux session: ssh {host} && tmux attach -t nmap_scan")
+        command = f'tail -n 1 segtest/{targets['scan_name']}*.xml'
+
+        # print(command[1])
+        results = run_ssh_command(host['name'], command) 
+        print(results[1])
+        # print(targets)
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
@@ -234,22 +238,27 @@ def main():
         config = load_config(args.config_file)
         validate_access(config)
 
-        # Process each host in sequence (parallelism is per-host)
+        # Process each host in sequence (parallelism is per-host) it will start the scans with xargs and with a default of 2 processes per host or more if you devine them in the config file
         for host_config in config['hosts']:
             scans = process_host(host_config)
             start_nmaps(scans, host_config)
 
-
-
-    if args.mode == 'monitor':
+    if args.mode == 'monitor': # check wether scans finished or not
         config = load_config(args.config_file)
+
         print('monitoring NOW !!!')
 
+        while True:
+            for host in config['hosts']:
+                print(f"\n{color_text('Checking status scans on:', Color.BOLD)} {host['name']}")
+                checker(host)
+            time.sleep(10)
 
 
 
-    # Run nmap in tmux
-    # run_nmap_in_tmux(args.host, args.scan_target, args.scan_args)
+        
+
+
 
 if __name__ == "__main__":
     main()
