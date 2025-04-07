@@ -254,11 +254,10 @@ def main():
                 checker(host)
             time.sleep(10)
 
-
-
+    if args.mode == 'results':
+        config = load_config(args.config_file)
+        for host in config['hosts']:
+            print(f"\n{color_text('Downloading scans from:', Color.BOLD)} {host['name']}")
         
-
-
-
 if __name__ == "__main__":
     main()
