@@ -228,13 +228,13 @@ def checker(host):
 
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
-    parser.add_argument("mode", choices=["launch", "monitor", "results"], help=" select one of the following <launch|monitor|results>")
+    parser.add_argument("mode", choices=["launch-scans", "monitor-scans", "scan-results", "start-responder", "parse-scans"], help=" select one of the following <launch|monitor|results>")
     parser.add_argument("config_file", help="Path to YAML configuration file")
     args = parser.parse_args()
 
 
 
-    if args.mode == 'launch':
+    if args.mode == 'launch-scans':
         config = load_config(args.config_file)
         validate_access(config)
 
@@ -243,7 +243,7 @@ def main():
             scans = process_host(host_config)
             start_nmaps(scans, host_config)
 
-    if args.mode == 'monitor': # check wether scans finished or not
+    if args.mode == 'monitor-scans': # check wether scans finished or not
         config = load_config(args.config_file)
 
         print('monitoring NOW !!!')
@@ -254,7 +254,7 @@ def main():
                 checker(host)
             time.sleep(10)
 
-    if args.mode == 'results':
+    if args.mode == 'scan-results':
         config = load_config(args.config_file)
         for host in config['hosts']:
             print(f"\n{color_text('Downloading scans from:', Color.BOLD)} {host['name']}")
