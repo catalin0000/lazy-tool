@@ -223,13 +223,61 @@ def checker(host):
         results = run_ssh_command(host['name'], command) 
         print(results[1])
         # print(targets)
+        
+def kerberoasting():
+    None
+
+def en_users(jh, dc_ip, user, password, domain):
+    domain = domain.split('.')
+
+    dns = ''
+    print(domain)
+    for item in domain:
+        if len(dns) == 0:
+            dns += 'dc='+item
+        else:
+            dns += ',dc='+item
+    
+    command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2"
+
+    command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2"
+    
+    # ssh_command 
+
+    
+    print(command2)
 
 
 
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
-    parser.add_argument("mode", choices=["launch-scans", "monitor-scans", "scan-results", "start-responder", "parse-scans"], help=" select one of the following <launch|monitor|results>")
-    parser.add_argument("config_file", help="Path to YAML configuration file")
+    subparsers = parser.add_subparsers(dest="mode", required=True, help="Select a mode")
+
+    launch_parser = subparsers.add_parser("launch-scans", help="Launch scans mode")
+    launch_parser.add_argument("config_file", help="Path to YAML configuration file")
+
+    monitor_parser = subparsers.add_parser("monitor-scans", help="Monitor scans mode")
+    monitor_parser.add_argument("config_file", help="Path to YAML configuration file")
+    
+    results_parser = subparsers.add_parser("scan-results", help="Show scan results")
+    results_parser.add_argument("config_file", help="Path to YAML configuration file")
+
+    
+    subparsers.add_parser("start-responder", help="Start responder tool")
+    subparsers.add_parser("parse-scans", help="Parse scan results")
+
+    users_parser = subparsers.add_parser("users", help="Grab all enabled and all high priv users on the target AD domain.")
+    users_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
+    users_parser.add_argument("-dc-ip", "-dc", required=True, help="Target DC or AD machine IP")
+    users_parser.add_argument("-user", "-u", required=True, help="Active Directory user. Example: admin@marvel.local")
+    users_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
+    users_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
+
+    
+    # parser.add_argument("mode", choices=["launch-scans", "monitor-scans", "scan-results", "start-responder", "parse-scans", "users"], help=" select one of the following <launch|monitor|results>")
+    # parser.add_argument("config_file", help="Path to YAML configuration file")
+
+
     args = parser.parse_args()
 
 
@@ -258,6 +306,11 @@ def main():
         config = load_config(args.config_file)
         for host in config['hosts']:
             print(f"\n{color_text('Downloading scans from:', Color.BOLD)} {host['name']}")
+
+
+    if args.mode == 'users':
+        en_users(args.jumphost, args.dc_ip, args.user, args.password, args.domain)
+        
         
 if __name__ == "__main__":
     main()
