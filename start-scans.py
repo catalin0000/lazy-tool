@@ -219,9 +219,6 @@ def en_users(jh, dc_ip, user, password, domain):
     if len(ldapsearch[1]) == 0:
         print('The following tool is missing: ldapsearch')
         exit()
-
-    if '@' not in user:
-        user = user+'@'+domain
             
     domain = domain.split('.')
     dns = ''
@@ -282,7 +279,6 @@ def roasting(jh, dc_ip, user, password, domain):
 
 def responder_run(jh, config_file=None):
     if config_file:
-
         # checking for tools
         tmux = run_ssh_command(jh, 'command -v tmux')
         responder = run_ssh_command(jh, 'command -v responder')
@@ -512,10 +508,8 @@ def main():
     
     results_parser = subparsers.add_parser("scan-results", help="Show scan results")
     results_parser.add_argument("config_file", help="Path to YAML configuration file")
-    
-    subparsers.add_parser("start-responder", help="Start responder tool")
-    subparsers.add_parser("parse-scans", help="Parse scan results")
 
+    
     users_parser = subparsers.add_parser("users", help="Grab all enabled and all high priv users on the target AD domain.")
     users_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
     users_parser.add_argument("-dc-ip", "-dc", required=True, help="Target DC or AD machine IP")
@@ -531,10 +525,10 @@ def main():
     roasting_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")    
 
     responder_parser = subparsers.add_parser("responder", help="Start responder on target host.")
-    responder_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from")
+    responder_parser.add_argument("-jumphost", "-jh", required=True, help="SSH host to run the command from. If you provide a config file it will check all hosts for smb signing and run responder+ntlmrelayx in socks mode.")
     responder_parser.add_argument("--config_file", "-c", help="Path to YAML configuration file")
 
-    pasaudit_parser = subparsers.add_parser("pass-audit", help="This will grab ntds.dit file, all enabled usersl, all high priv users, and dump the ntds.dit.")
+    pasaudit_parser = subparsers.add_parser("pass-audit", help="This will grab ntds.dit file, all enabled usersl, all high priv users, and dump the ntds.dit(this is done locally).")
     pasaudit_parser.add_argument("-jumphost", "-jh", required=False, help="SSH jumphost to run the command from, if there is one.")
     pasaudit_parser.add_argument("-dc-ip", "-dc", required=True, help="Target DC or AD machine IP")
     pasaudit_parser.add_argument("-user", "-u", required=True, help="Active Directory user. Example: admin@marvel.local")
