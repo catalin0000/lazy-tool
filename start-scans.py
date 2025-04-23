@@ -219,7 +219,10 @@ def en_users(jh, dc_ip, user, password, domain):
     if len(ldapsearch[1]) == 0:
         print('The following tool is missing: ldapsearch')
         exit()
-            
+
+    if '@' not in user:
+        user = user+'@'+domain
+
     domain = domain.split('.')
     dns = ''
     for item in domain:
