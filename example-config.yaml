@@ -1,5 +1,5 @@
 hosts:
-  - name: host1 # host defined in the ssh config file
+  - name: kalilab # host defined in the ssh config file
     parallel: 2  # amount of scans to run in the same time
     scans:
       - target: 192.168.1.0/24 # target to scan, can be networks or specific IP
