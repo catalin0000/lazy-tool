@@ -1,28 +1,25 @@
 hosts:
-  - name: kalilab # host defined in the ssh config file
-    parallel: 2  # amount of scans to run in the same time
-    scans:
-      - target: 192.168.1.0/24 # target to scan, can be networks or specific IP
-        scan_name: example-net1 # name of the scan to save under
-        nmap_args: "-p- -T4" # nmap arguments for specific target
-        # output_file: "internal-scan"
-        # privileged: false  # Requires sudo
+  - name: kalilab # host defined in the ssh config file - required
+    parallel: 8  # amount of scans to run in the same time 2 is the default if not specified
+    scans: # -required
+      - target: 192.168.1.0/24 # target to scan, can be networks or specific IP - required
+        scan_name: example-net1 # name of the scan to save under - not required
+        nmap_args: "-p- -T4" # nmap arguments for specific target - not required
 
-      - target: 10.10.10.10/24
-        scan_name: example-net2
-        nmap_args: "-p- -T4"
-      #   nmap_args: "-sS -p-"
-      #   output_file: "vpn-scan"
-      #   privileged: false  # Requires sudo
+
+      - target: 10.10.10.10/24 # required
+        scan_name: example-net2 # not required
+        nmap_args: "-p- -T4" # not required
+
 
   # - name: host2 # host name used in the ssh config file which will start nmap scans from
   #   scans:
   #     - target: 10.10.11.0/24
   #       scan_name: example-net3
   #       nmap_args: "-sV -T4 -Pn" # optional
-  #       privileged: false # optional
+
 
       # - target: 192.168.2.1-254
       #   scan_name: example-net4
       #   nmap_args: "-O --script=banner"
-      #   privileged: true  # Requires sudo
+
