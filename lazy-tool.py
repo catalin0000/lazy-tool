@@ -380,7 +380,6 @@ def responder_run(jh, config_file=None):
         # grab ethernet interface to listen on
         interface = run_ssh_command(jh, 'ip a')
         interfaces = []
-        print(interface)
         for line in interface[0].split('\n'):
             if_match = re.match(r'^\d+:\s+([^:]+):\s+<.*UP.*>', line)
             if if_match:
@@ -432,9 +431,9 @@ def responder_run(jh, config_file=None):
         responder = run_ssh_command(jh, 'command -v responder')
         missing_stuff = []    
 
-        if len(tmux[1]) == 0:
+        if len(tmux[0]) == 0:
             missing_stuff.append('tmux')
-        if len(responder[1]) == 0:
+        if len(responder[0]) == 0:
             missing_stuff.append('responder')
 
         if missing_stuff : 
@@ -665,7 +664,7 @@ def main():
     pasaudit_parser.add_argument("-verbose", "-v", required=False, action=argparse.BooleanOptionalAction, help="Verbose output. You will see each running command and it's output.")
     
     parse_parser = subparsers.add_parser("parse", help="Parse nmap output. - Not ready yet. It does nothing :).")
-    parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
+    parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.  Not ready yet. It does nothing :).")
 
     args = parser.parse_args()
 
