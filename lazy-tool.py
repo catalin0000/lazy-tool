@@ -262,9 +262,8 @@ def en_users(jh, dc_ip, user, password, domain):
 
 def roasting(jh, dc_ip, user, password, domain):
     netexec = run_ssh_command(jh, 'command -v netexec')
-    if len(netexec[2]) != 0:
+    if len(netexec[1]) == 0:
         print('The following tool is missing: netexec')
-        print('Tool error:\n', netexec[2])
         exit()
 
     # create remote directory
@@ -461,6 +460,10 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         time.sleep(1)
         
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
+
+        # create remote directory
+        create_rem_dir = 'mkdir ntds-dump'
+        create = run_ssh_command(jh, create_rem_dir)
         
         print(color_text('Running diskshadow.\n', Color.BOLD))
         run_audit = run_ssh_command(jh, command2)        
