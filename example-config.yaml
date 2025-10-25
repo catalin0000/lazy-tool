@@ -1,25 +1,42 @@
 hosts:
-  - name: kalilab # host defined in the ssh config file - required
+  - name: kali # host defined in the ssh config file - required
     parallel: 8  # amount of scans to run in the same time 2 is the default if not specified
+    interfaces: eth0,eth1, eth2, eth3, eth4 # - add all the interfaces this host has - not required
+    tcp: -sS --min-rate=200  # nmap arguments you want for your TCP scans - not required
+    udp: -sU -sV # nmap arguments you want for your UDP scans - not required
     scans: # -required
-      - target: 192.168.1.0/24 # target to scan, can be networks or specific IP - required
-        scan_name: example-net1 # name of the scan to save under - not required
-        nmap_args: "-p- -T4" # nmap arguments for specific target - not required
+      - target: 192.168.0.0/24 # target to scan, can be networks or specific IP - required
+        source: eth0, eth1,eth2 # if you want to scan that target from specific interface/s - not required
+        # target-network-name: example-net1 # name of the scan to save under - not required
+        # tcp: -p- -T4 # nmap arguments for specific target - not required
+        # udp: -sU -T4 # UDP args for sepcific target network - not required
 
 
-      - target: 10.10.10.10/24 # required
-        scan_name: example-net2 # not required
-        nmap_args: "-p- -T4" # not required
+      - target: 10.0.0.0/24 # required
+        target-network-name: pxe-vlan # not required
+        tcp: "-p- -T4" # not required
+        # source: eth2
+        # udp: -sU -T4
+
+      - target: 10.0.1.0/24
+        target-network-name: pxe-vlan2
+        source: eth3
+        
+      - target: 10.0.3.0/24
+        target-network-name: pxe-vlan3
+        # source: eth3
 
 
-  # - name: host2 # host name used in the ssh config file which will start nmap scans from
-  #   scans:
-  #     - target: 10.10.11.0/24
-  #       scan_name: example-net3
-  #       nmap_args: "-sV -T4 -Pn" # optional
+  - name: pxe # host name used in the ssh config file which will start nmap scans from
+    interfaces: ens18
+    scans:
+      - target: 192.168.0.0/24
+        target-network-name: main-vlan
+        tcp: "-sV -T4 -Pn" # optional
+        source: ens18
 
 
-      # - target: 192.168.2.1-254
-      #   scan_name: example-net4
-      #   nmap_args: "-O --script=banner"
+      - target: 10.0.0.0/24
+        target-network-name: pxe-vlan
+        tcp: "-O --script=banner"
 

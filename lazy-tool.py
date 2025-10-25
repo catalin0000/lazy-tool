@@ -176,7 +176,6 @@ def process_host(config_file, live=False):
 
 
     else:
-        print('running this once. or it should be')
         live_ips = {}
 
         nmap_scans = {}
@@ -186,7 +185,7 @@ def process_host(config_file, live=False):
             arp = run_ssh_command(host['name'], 'which arp-scan')
 
             if 'not found' in arp[0]:
-                print('arp-scan not installed on host.')
+                print('arp-scan not installed on host.', host)
                 exit()
 
         
@@ -198,7 +197,7 @@ def process_host(config_file, live=False):
             live_ips[host_name] = {}
 
             run_ssh_command(host_name, 'mkdir lazy-tool')
-            run_ssh_command(host_name, 'mkdir lazy-tool/segtest-nmaps')
+            
 
             if host_config.get('interfaces'):
                 temp = host_config.get('interfaces')
@@ -237,6 +236,8 @@ def process_host(config_file, live=False):
                 temp = host_config.get('interfaces')
                 for item in temp.split(','):
                     ifs.append(item.strip())
+
+            run_ssh_command(host_name, 'mkdir lazy-tool/segtest-nmaps')
 
             default_tcp = host_config.get('tcp', '-dd -n -T4 -sS -p- --min-rate=200 --traceroute --reason')
             default_udp = host_config.get('udp', '-dd -n -T4 -sU -sV --min-rate=1000 --traceroute --reason')
