@@ -125,8 +125,9 @@ def load_config(yaml_file):
 
 def process_host(config_file, live=False):
 
-    scan_files = {}
+    # scan_files = {}
 
+    nmap_scans = {}
     
 
     if not live:
@@ -134,6 +135,8 @@ def process_host(config_file, live=False):
             host_name = host_config['name']
             scans = host_config['scans']
             ifs = []
+
+            cwd = run_ssh_command(host_name, 'pwd')
 
             run_ssh_command(host_name, 'mkdir lazy-tool')
             run_ssh_command(host_name, 'mkdir lazy-tool/segtest-nmaps')
@@ -146,7 +149,7 @@ def process_host(config_file, live=False):
             default_tcp = host_config.get('tcp', '-dd -n -T4 -sS -p- --min-rate=200 --traceroute --reason')
             default_udp = host_config.get('udp', '-dd -n -T4 -sU -sV --min-rate=1000 --traceroute --reason')
 
-            scan_file = ''
+            scan_file = []
             for scan in scans:
                 sources = []
                 if scan.get('source'):
@@ -159,26 +162,27 @@ def process_host(config_file, live=False):
                 if len(sources) > 1:
                     for eth in sources:
                         if len(scan_file) == 0:
-                            scan_file = f"sudo nmap -e {eth} {scan.get('tcp', default_tcp)} -oA lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.tcp {scan['target']}"
-                            scan_file += f"\nsudo nmap -e {eth} {scan.get('udp', default_udp)} -oA lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.udp {scan['target']}"
+                            scan_file.append(f"sudo nmap -e {eth} {scan.get('tcp', default_tcp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.tcp {scan['target']}")
+                            scan_file.append(f"sudo nmap -e {eth} {scan.get('udp', default_udp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.udp {scan['target']}")
                         else:
-                            scan_file += f"\nsudo nmap -e {eth} {scan.get('tcp', default_tcp)} -oA lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.tcp {scan['target']}"
-                            scan_file += f"\nsudo nmap -e {eth} {scan.get('udp', default_udp)} -oA lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.udp {scan['target']}"
+                            scan_file.append(f"sudo nmap -e {eth} {scan.get('tcp', default_tcp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.tcp {scan['target']}")
+                            scan_file.append(f"sudo nmap -e {eth} {scan.get('udp', default_udp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}.{eth}-to-{to}.udp {scan['target']}")
 
                 else:
                     if len(scan_file) == 0:
-                        scan_file = f"sudo nmap {scan.get('tcp', default_tcp)} -oA lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan['target']}"
-                        scan_file += f"\nsudo nmap {scan.get('udp', default_udp)} -oA lazy-tool/segtest-nmaps/{host_name}-to-{to}.udp {scan['target']}"
+                        scan_file.append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan['target']}")
+                        scan_file.append(f"sudo nmap {scan.get('udp', default_udp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.udp {scan['target']}")
                     else:
-                        scan_file += f"\nsudo nmap {scan.get('tcp', default_tcp)} -oA lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan['target']}"
-                        scan_file += f"\nsudo nmap {scan.get('udp', default_udp)} -oA lazy-tool/segtest-nmaps/{host_name}-to-{to}.udp {scan['target']}"
-            scan_files[host_name]= scan_file            
+                        scan_file.append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan['target']}")
+                        scan_file.append(f"sudo nmap {scan.get('udp', default_udp)} -oA {cwd[0]}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.udp {scan['target']}")
+
+            nmap_scans[host_name] = scan_file            
 
 
     else:
         live_ips = {}
 
-        nmap_scans = {}
+        
         
         for host in config_file['hosts']:
             # check if arp-scan is installed
@@ -237,6 +241,10 @@ def process_host(config_file, live=False):
                 for item in temp.split(','):
                     ifs.append(item.strip())
 
+
+            cwd = run_ssh_command(host_name, 'pwd')
+            cwd = cwd[0]
+
             run_ssh_command(host_name, 'mkdir lazy-tool/segtest-nmaps')
 
             default_tcp = host_config.get('tcp', '-dd -n -T4 -sS -p- --min-rate=200 --traceroute --reason')
@@ -253,54 +261,67 @@ def process_host(config_file, live=False):
 
                 to = scan.get('target-network-name' ,'.'.join(scan.get('target').split('.')[:-1]))
 
+                # check if target network has been scanned for live IPs
                 check, host, eth2, ip = check_network_in_live_ips(live_ips, scan.get('target'))
 
-                # print(check, host, eth2, ip)
+                
 
-                create_local_dir = ['mkdir', f"from-{host_name}-to"]
-                create = subprocess.run(create_local_dir, capture_output=True, text=True)
-
+                # if target network has been scanned for live IPs 
                 if check:
+                    create_local_dir = ['mkdir', f"from-{host_name}-to"]
+                    create = subprocess.run(create_local_dir, capture_output=True, text=True)
+
                     copy_targets_locally = f"cp {host}-live/{host}.{eth2}.live from-{host_name}-to/."
                     copy = subprocess.run(copy_targets_locally, shell=True, capture_output=True, text=True)
 
-                    # create remote directory and copy targets over
+                    # create remote directory and copy target files over
                     run_ssh_command(host_name, 'mkdir lazy-tool/segtest-targets')
-                    
-                    run_scp_command(host_name, f'from-{host_name}-to/{host}.{eth2}.live', f'segtest-targets/{host}.{eth2}.live', 'put')
+                    run_scp_command(host_name, f'from-{host_name}-to/{host}.{eth2}.live', f'lazy-tool/segtest-targets/{host}.{eth2}.live', 'put')
 
+                    # generating the nmap scan commands
+                    if scan.get('source'): # if scans have to be run from multiple interfaces 
+                        temp = scan.get('source')
+                        for interfaces in temp.split(','):
+                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('tcp', default_tcp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp -iL {cwd}/lazy-tool/segtest-targets/{host}.{eth2}.live")
+                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('udp', default_udp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp -iL {cwd}/lazy-tool/segtest-targets/{host}.{eth2}.live")
+                    else:
+                        nmap_scans[host_name].append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp -iL {cwd}/lazy-tool/segtest-targets/{host}.{eth2}.live")
+                        nmap_scans[host_name].append(f"sudo nmap {scan.get('udp', default_udp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp -iL {cwd}/lazy-tool/segtest-targets/{host}.{eth2}.live")
+
+                # if we don't have a vm/ip/ethernet port in that network but we still have to scan it
+                else: 
                     if scan.get('source'):
                         temp = scan.get('source')
                         for interfaces in temp.split(','):
-                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('tcp', default_tcp)} -oA segtest-nmaps/{host_name}-to-{to}.tcp -iL segtest-targets/{host}.{eth2}.live")
-                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('udp', default_udp)} -oA segtest-nmaps/{host_name}-to-{to}.tcp -iL segtest-targets/{host}.{eth2}.live")
+                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('tcp', default_tcp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan.get('target')}")
+                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('udp', default_udp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan.get('target')}")
 
                     else:
-                        nmap_scans[host_name].append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA segtest/{host_name}-to-{to}.tcp -iL segtest-targets/{host}.{eth2}.live")
-                        nmap_scans[host_name].append(f"sudo nmap {scan.get('udp', default_udp)} -oA segtest/{host_name}-to-{to}.tcp -iL segtest-targets/{host}.{eth2}.live")
+                        nmap_scans[host_name].append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan.get('target')}")
+                        nmap_scans[host_name].append(f"sudo nmap {scan.get('udp', default_udp)} -oA {cwd}/lazy-tool/segtest-nmaps/{host_name}-to-{to}.tcp {scan.get('target')}")
 
 
-
-                else:
-                    if scan.get('source'):
-                        temp = scan.get('source')
-                        for interfaces in temp.split(','):
-                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('tcp', default_tcp)} -oA segtest/{host_name}-to-{to}.tcp {scan.get('target')}")
-                            nmap_scans[host_name].append(f"sudo nmap -e {interfaces} {scan.get('udp', default_udp)} -oA segtest/{host_name}-to-{to}.tcp {scan.get('target')}")
-
-                    else:
-                        nmap_scans[host_name].append(f"sudo nmap {scan.get('tcp', default_tcp)} -oA segtest/{host_name}-to-{to}.tcp {scan.get('target')}")
-                        nmap_scans[host_name].append(f"sudo nmap {scan.get('udp', default_udp)} -oA segtest/{host_name}-to-{to}.tcp {scan.get('target')}")
-                    print('there are no arp scans on this network so will have to scan the whole network.')
-
-
+    
                 
-            
-        # print(live_ips)
-            
-        print(nmap_scans)
+    # print(nmap_scans)
 
-    return scan_files
+    for host in nmap_scans.keys():
+
+        all_scans = ''
+
+
+        for scan in nmap_scans[host]:
+            all_scans += scan + '\n'
+            # print(item, scan)            
+
+
+        # create scans file on host
+        run_ssh_command(host, f"echo '{all_scans}' > lazy-tool/all-scans")
+        
+        # print(all_scans)
+
+
+    return None
 
 def check_network_in_live_ips(live_ips, network_cidr):
     """Check if a IP falls within the given network"""
