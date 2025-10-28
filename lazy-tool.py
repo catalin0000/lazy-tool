@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import argparse
@@ -8,6 +9,72 @@ import re
 import paramiko
 from paramiko.config import SSHConfig
 import ipaddress
+import xmltodict
+
+
+json_nmaps = []
+
+def parse_results():
+    for scan in json_nmaps:
+        for k,i in scan.items():
+            for q,w in i.items():
+                if q == 'host':
+                    for host in w:
+                        ip = ''
+                        for e,r in host.items():
+                            try:
+                                if e == 'address':
+                                    ip = r[0]['@addr']
+                            except:
+                                ip = r['@addr']
+                                print(ip)
+                                print('wtf errored?')
+                                # print(e)
+                                
+                            if e == 'ports':
+                                # print(r)
+                                try:
+                                    for p in host[e]['port']:
+                                        try :
+                                            if p['state']['@state'] == 'open':
+                                                print(ip, p)
+                                        except:
+                                            # print(type(p))
+                                            None
+                                            # print('errored\n\n',p, r, '\n why this didnt work... \n')                            
+                                except:
+                                    None
+
+                        # exit()
+                    
+
+def parse_nmaps(path):
+    if os.path.isfile(path):
+        # print(f"'{path}' is a file")
+        json_nmaps.append(open_xml_file(path))
+        # return [path]
+    elif os.path.isdir(path):
+        # print(f"'{path}' is a directory")
+        file_paths = []
+        for filename in os.listdir(path):
+            file_path = os.path.join(path, filename)
+            if os.path.isfile(file_path) and file_path.endswith('.xml'):
+                file_paths.append(file_path)
+                json_nmaps.append(open_xml_file(file_path))
+
+        # return file_paths
+    # else:
+        # print(f"'{path}' does not exist")
+        # return []
+    
+def open_xml_file(xml_file):
+    with open(xml_file, 'r') as file:
+        xml_content = file.read()
+    
+    # Parse XML to dictionary
+    nmap_data = xmltodict.parse(xml_content)
+    return nmap_data
+
 
 # Cache for open connections
 _ssh_connections = {}  
@@ -23,16 +90,29 @@ def run_ssh_command(hostname, command):
             ssh_config.parse(f)
         
         cfg = ssh_config.lookup(hostname)
-        
+
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(
+
+        # this will handle proxyjumps 
+        if 'proxyjump' in cfg:
+            ssh.connect(
             hostname=cfg.get('hostname', hostname),
             port=int(cfg.get('port', 22)),
             username=cfg.get('user'),
             key_filename=cfg.get('identityfile', [None])[0],
-            look_for_keys=False
+            look_for_keys=False,
+            sock=paramiko.ProxyCommand(f"ssh -W {cfg.get('hostname', hostname)}:{int(cfg.get('port', 22))} {cfg['proxyjump']}")
         )
+
+        else:
+            ssh.connect(
+                hostname=cfg.get('hostname', hostname),
+                port=int(cfg.get('port', 22)),
+                username=cfg.get('user'),
+                key_filename=cfg.get('identityfile', [None])[0],
+                look_for_keys=False
+            )
         _ssh_connections[hostname] = ssh
     
     # Run command on existing connection
@@ -317,6 +397,9 @@ def process_host(config_file, live=False):
 
         # create scans file on host
         run_ssh_command(host, f"echo '{all_scans}' > lazy-tool/all-scans")
+
+
+
         
         # print(all_scans)
 
@@ -340,12 +423,53 @@ def check_network_in_live_ips(live_ips, network_cidr):
     return False, None, None, None
     
 
-def grab_live_ips():
-    None
+def nmap_handler():
 
-def process_host_live():
-    None
+    script = f"""
 
+#!/usr/bin/env python3
+import subprocess
+import time
+import datetime
+import sys
+
+def should_scan():
+    'Check if current time is within allowed scanning hours'
+    now = datetime.datetime.now()
+    hour = now.hour
+    # Only scan between 8 PM and 6 AM
+    return hour >= 20 or hour < 6
+
+def run_nmap_scan():
+    'Run your nmap scan command'
+    cmd = "nmap -sS -T4 -p- 192.168.1.0/24"
+    try:
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=1800)
+        print(f"Scan completed at {datetime.datetime.now()}")
+        # Save results to file
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(f"/tmp/nmap_scan_{timestamp}.txt", "w") as f:
+            f.write(result.stdout)
+    except subprocess.TimeoutExpired:
+        print("Scan timed out after 30 minutes")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def main():
+    print("Nmap scheduler started...")
+    while True:
+        if should_scan():
+            print(f"Starting scan at {datetime.datetime.now()}")
+            run_nmap_scan()
+            time.sleep(3600)  # 1 hour between scans
+        else:
+            time.sleep(300)   # 5 minutes during restricted hours
+
+if __name__ == "__main__":
+    main()
+"""
+
+    return script
 
 # def run_ssh_command(host, command):
 #     try:
@@ -938,7 +1062,12 @@ def main():
             pas_audit(args.dc_ip, args.user, args.password, args.domain)
 
     if args.mode == 'parse' :
-        print('Hello')
+        parse_nmaps(args.nmap_output)        
+
+        parse_results()
+
+
+        # print(json_nmaps)        
 
     close_all_ssh_connections()
     
