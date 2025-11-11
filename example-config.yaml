@@ -40,3 +40,9 @@ hosts:
         target-network-name: pxe-vlan
         tcp: "-O --script=banner"
 
+
+  - name: kalilab
+    interfaces: eth1
+    scans:
+      - target: 192.168.0.0/24
+        source: eth2,eth30
