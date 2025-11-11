@@ -9,75 +9,50 @@ import re
 import paramiko
 from paramiko.config import SSHConfig
 import ipaddress
-import xmltodict
+import xml.etree.ElementTree as ET
 
 
-json_nmaps = []
+nmap_results = {}
 
-def parse_results():
-    for scan in json_nmaps:
-        for k,i in scan.items():
-            for q,w in i.items():
-                if q == 'host':
-                    for host in w:
-                        ip = ''
-                        for e,r in host.items():
-                            try:
-                                if e == 'address':
-                                    ip = r[0]['@addr']
-                            except:
-                                ip = r['@addr']
-                                print(ip)
-                                print('wtf errored?')
-                                # print(e)
-                                
-                            if e == 'ports':
-                                # print(r)
-                                try:
-                                    for p in host[e]['port']:
-                                        try :
-                                            if p['state']['@state'] == 'open':
-                                                print(ip, p)
-                                        except:
-                                            # print(type(p))
-                                            None
-                                            # print('errored\n\n',p, r, '\n why this didnt work... \n')                            
-                                except:
-                                    None
+def create_tests():
 
-                        # exit()
-                    
+    for ip,ports in nmap_results.items():
+        for port in ports:
+            if port['state'] == 'open':
+                # print(ip, port)
+                if port['tunnel'] == 'ssl':
+                    print(f"testssl -oJ testssl/{ip}.{port['port']}.json {ip}:{port['port']} ")
+
+
+
+def parse_file(path):
+    tree = ET.parse(path)
+    root = tree.getroot()
+    for host in root.findall('host'):
+        ip = host.find('address').get('addr')
+        if host.find('status').get('state') == 'up':           
+            for port in host.find('ports').findall('port'):
+                prot = port.get('protocol')
+                svc = port.find('service')
+                state = port.find('state').get('state')           
+                if state == 'open' or state == 'closed':
+                    if host.find('address').get('addr') not in nmap_results :
+                        nmap_results[ip] = []
+                    nmap_results[ip].append({'port':port.get('portid'), 'protocol': port.get('protocol'), 'state': state, 'serv_name': svc.get('name') if svc is not None else None, 'serv_conf': svc.get('conf') if svc is not None else None, 'tunnel': svc.get('tunnel') if svc is not None else None })
 
 def parse_nmaps(path):
     if os.path.isfile(path):
-        # print(f"'{path}' is a file")
-        json_nmaps.append(open_xml_file(path))
-        # return [path]
+        parse_file(path)
     elif os.path.isdir(path):
-        # print(f"'{path}' is a directory")
         file_paths = []
         for filename in os.listdir(path):
             file_path = os.path.join(path, filename)
             if os.path.isfile(file_path) and file_path.endswith('.xml'):
-                file_paths.append(file_path)
-                json_nmaps.append(open_xml_file(file_path))
-
-        # return file_paths
-    # else:
-        # print(f"'{path}' does not exist")
-        # return []
-    
-def open_xml_file(xml_file):
-    with open(xml_file, 'r') as file:
-        xml_content = file.read()
-    
-    # Parse XML to dictionary
-    nmap_data = xmltodict.parse(xml_content)
-    return nmap_data
-
+                parse_file(file_path)
+    create_tests()
 
 # Cache for open connections
-_ssh_connections = {}  
+_ssh_connections = {}
 _sftp_connections = {}
 
 def run_ssh_command(hostname, command):
@@ -147,7 +122,7 @@ def close_all_ssh_connections():
     for hostname, conn in _ssh_connections.items():
         conn.close()
     _ssh_connections.clear()
-
+    
     for hostname, conn in _sftp_connections.items():
         conn.close()
     _sftp_connections.clear()
@@ -1063,8 +1038,6 @@ def main():
 
     if args.mode == 'parse' :
         parse_nmaps(args.nmap_output)        
-
-        parse_results()
 
 
         # print(json_nmaps)        
