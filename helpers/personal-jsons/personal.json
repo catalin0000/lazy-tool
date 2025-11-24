@@ -1,0 +1,375 @@
+{
+  "zepto": {
+    "regex": [
+      "Zepto(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "prototypejs": {
+    "regex": [
+      "Prototype(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "scriptaculous": {
+    "regex": [
+      "Scriptaculous(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "mootools": {
+    "regex": [
+      "MooTools(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "extjs": {
+    "regex": [
+      "Ext JS(?:.*)?([0-9.]+)"
+    ]
+  },
+  "sencha-touch": {
+    "regex": [
+      "Sencha(?:.*)?Touch(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "dojo": {
+    "regex": [
+      "dojo(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "yui": {
+    "regex": [
+      "YUI(?:.*)?([0-9.]+)"
+    ]
+  },
+  "knockout": {
+    "regex": [
+      "Knockout(?:.*)?v?([0-9.]+)",
+      "ko\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "ember": {
+    "regex": [
+      "Ember\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "svelte": {
+    "regex": [
+      "Svelte(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "alpinejs": {
+    "regex": [
+      "Alpine(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "stimulus": {
+    "regex": [
+      "Stimulus(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "rxjs": {
+    "regex": [
+      "Rx\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "zonejs": {
+    "regex": [
+      "Zone\\.js(?:.*)?([0-9.]+)"
+    ]
+  },
+  "systemjs": {
+    "regex": [
+      "SystemJS(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "requirejs": {
+    "regex": [
+      "RequireJS(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "esprima": {
+    "regex": [
+      "Esprima(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "acorn": {
+    "regex": [
+      "Acorn(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "babel": {
+    "regex": [
+      "Babel(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "rxjs-compat": {
+    "regex": [
+      "Rx\\.compat(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "hammerjs": {
+    "regex": [
+      "Hammer(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "animejs": {
+    "regex": [
+      "anime(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "velocityjs": {
+    "regex": [
+      "Velocity(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "greensock-gsap": {
+    "regex": [
+      "GSAP(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "popperjs": {
+    "regex": [
+      "Popper(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "tippyjs": {
+    "regex": [
+      "Tippy(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "scrollmagic": {
+    "regex": [
+      "ScrollMagic(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "echarts": {
+    "regex": [
+      "echarts(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "highcharts": {
+    "regex": [
+      "Highcharts(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "highmaps": {
+    "regex": [
+      "Highmaps(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "highstock": {
+    "regex": [
+      "Highstock(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "amcharts3": {
+    "regex": [
+      "AmCharts(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "amcharts4": {
+    "regex": [
+      "am4core(?:.*)?version['\"]?:['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "apexcharts": {
+    "regex": [
+      "ApexCharts(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "plotly": {
+    "regex": [
+      "Plotly(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "c3js": {
+    "regex": [
+      "c3(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "nvd3": {
+    "regex": [
+      "nv\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+
+  "ol-openlayers": {
+    "regex": [
+      "OpenLayers(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "google-maps-js-api": {
+    "regex": [
+      "google\\.maps(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "tailwindcss": {
+    "regex": [
+      "tailwindcss(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "bulma": {
+    "regex": [
+      "Bulma(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "foundation": {
+    "regex": [
+      "Foundation(?:.*)?([0-9.]+)"
+    ]
+  },
+  "materialize": {
+    "regex": [
+      "Materialize(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "semantic-ui": {
+    "regex": [
+      "Semantic(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "mathjax": {
+    "regex": [
+      "MathJax(?:.*)?([0-9.]+)"
+    ]
+  },
+
+  "marked": {
+    "regex": [
+      "marked(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "markdownit": {
+    "regex": [
+      "markdownit(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "quill": {
+    "regex": [
+      "Quill(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "summernote": {
+    "regex": [
+      "Summernote(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "trix": {
+    "regex": [
+      "Trix(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "wysihtml5": {
+    "regex": [
+      "wysihtml5(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "xtermjs": {
+    "regex": [
+      "xterm(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "highlightjs": {
+    "regex": [
+      "Highlight\\.js(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "prismjs": {
+    "regex": [
+      "Prism(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "dropzone": {
+    "regex": [
+      "Dropzone(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "filepond": {
+    "regex": [
+      "FilePond(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "uppy": {
+    "regex": [
+      "Uppy(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "slick": {
+    "regex": [
+      "Slick(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "owl-carousel": {
+    "regex": [
+      "Owl(?:.*)?Carousel(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "swiper": {
+    "regex": [
+      "Swiper(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "isotope": {
+    "regex": [
+      "Isotope(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "masonry": {
+    "regex": [
+      "Masonry(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "flickity": {
+    "regex": [
+      "Flickity(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "fullcalendar": {
+    "regex": [
+      "FullCalendar(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "flatpickr": {
+    "regex": [
+      "flatpickr(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "pikaday": {
+    "regex": [
+      "Pikaday(?:.*)?v?([0-9.]+)"
+    ]
+  },
+
+  "datatables": {
+    "regex": [
+      "DataTables(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "tabulator": {
+    "regex": [
+      "Tabulator(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "handsontable": {
+    "regex": [
+      "Handsontable(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "simplemodal": {
+    "regex": [
+      "SimpleModal\\s+v?([0-9.]+)"
+    ]
+  }
+}

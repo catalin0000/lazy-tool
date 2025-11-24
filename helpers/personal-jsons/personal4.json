@@ -1,0 +1,270 @@
+{
+  "jquery-ui": {
+    "regex": [
+      "jQuery UI(?: Core)?(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-migrate": {
+    "regex": [
+      "jQuery Migrate(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-validation": {
+    "regex": [
+      "jQuery Validation(?: Plugin)?(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-form": {
+    "regex": [
+      "jQuery Form(?: Plugin)?(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-cookie": {
+    "regex": [
+      "jQuery Cookie(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-hoverintent": {
+    "regex": [
+      "hoverIntent(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-slimscroll": {
+    "regex": [
+      "slimScroll(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-tablesorter": {
+    "regex": [
+      "tablesorter(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-ui-touch-punch": {
+    "regex": [
+      "Touch Punch(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-file-upload": {
+    "regex": [
+      "jQuery File Upload(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "jquery-validate-unobtrusive": {
+    "regex": [
+      "Unobtrusive Validation(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "simplemodal": {
+    "regex": [
+      "SimpleModal\\s+v?([0-9.]+)"
+    ]
+  },
+  "fancybox": {
+    "regex": [
+      "fancybox(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "colorbox": {
+    "regex": [
+      "Colorbox(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "prettyphoto": {
+    "regex": [
+      "prettyPhoto(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "superfish": {
+    "regex": [
+      "Superfish(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "cycle": {
+    "regex": [
+      "Cycle(?:2)?(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "bootstrap": {
+    "regex": [
+      "Bootstrap(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "backbone": {
+    "regex": [
+      "Backbone(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "underscore": {
+    "regex": [
+      "Underscore(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "lodash": {
+    "regex": [
+      "lodash(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "vue": {
+    "regex": [
+      "Vue\\.version\\s*=\\s*['\"]([0-9.]+)['\"]",
+      "Vue v?([0-9.]+)"
+    ]
+  },
+  "react": {
+    "regex": [
+      "React\\.version\\s*=\\s*['\"]([0-9.]+)['\"]",
+      "\\/\\* React v([0-9.]+)"
+    ]
+  },
+  "angularjs": {
+    "regex": [
+      "\\/\\*+\\s*AngularJS v?([0-9.]+)",
+      "angular\\.version\\.full\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "angular": {
+    "regex": [
+      "ngVersion.*?\"major\":([0-9]+),\"minor\":([0-9]+),\"patch\":([0-9]+)"
+    ]
+  },
+  "ember": {
+    "regex": [
+      "Ember\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "polymer": {
+    "regex": [
+      "Polymer(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "moment": {
+    "regex": [
+      "Moment(?:\\.js)?(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "moment-timezone": {
+    "regex": [
+      "moment\\.tz\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "chartjs": {
+    "regex": [
+      "Chart\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "d3": {
+    "regex": [
+      "d3\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "leaflet": {
+    "regex": [
+      "leaflet(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "threejs": {
+    "regex": [
+      "\\/\\*+\\s*Three\\.js r([0-9]+)"
+    ]
+  },
+  "modernizr": {
+    "regex": [
+      "Modernizr(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "handlebars": {
+    "regex": [
+      "Handlebars(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "mustache": {
+    "regex": [
+      "Mustache(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "knockout": {
+    "regex": [
+      "Knockout(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "requirejs": {
+    "regex": [
+      "\\/\\*+\\s*RequireJS(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "dojo": {
+    "regex": [
+      "dojo(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "socketio": {
+    "regex": [
+      "socket\\.io(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "pdfjs": {
+    "regex": [
+      "(?:const|var) pdfjsVersion = ['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "videojs": {
+    "regex": [
+      "videojs\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "highlightjs": {
+    "regex": [
+      "\\/\\*+\\s*Highlight\\.js v?([0-9.]+)"
+    ]
+  },
+  "ace": {
+    "regex": [
+      "\\/\\*+\\s*Ace Editor v?([0-9.]+)"
+    ]
+  },
+  "codemirror": {
+    "regex": [
+      "CodeMirror(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "tinymce": {
+    "regex": [
+      "tinymce(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "ckeditor4": {
+    "regex": [
+      "CKEDITOR\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "ckeditor5": {
+    "regex": [
+      "ClassicEditor\\.version\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "swiper": {
+    "regex": [
+      "Swiper(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "fullcalendar": {
+    "regex": [
+      "FullCalendar(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "dropzone": {
+    "regex": [
+      "Dropzone(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "select2": {
+    "regex": [
+      "Select2(?:.*)?v?([0-9.]+)"
+    ]
+  },
+  "datatables": {
+    "regex": [
+      "DataTables(?:.*)?v?([0-9.]+)"
+    ]
+  }
+}

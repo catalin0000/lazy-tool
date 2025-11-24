@@ -1,0 +1,232 @@
+{
+  "modernizr": {
+    "regex": [
+      "Modernizr v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "requirejs": {
+    "regex": [
+      "RequireJS v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "systemjs": {
+    "regex": [
+      "SystemJS v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "stealjs": {
+    "regex": [
+      "StealJS v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "rollupjs": {
+    "regex": [
+      "Rollup v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "esbuild": {
+    "regex": [
+      "esbuild v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "parceljs": {
+    "regex": [
+      "Parcel v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "d3": {
+    "regex": [
+      "D3 v?([0-9A-Za-z.+-]+)",
+      "d3\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "chartkick": {
+    "regex": [
+      "Chartkick\\.VERSION\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "morrisjs": {
+    "regex": [
+      "Morris v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "c3js": {
+    "regex": [
+      "c3 v?([0-9A-Za-z.+-]+)",
+      "c3Version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "plotlyjs": {
+    "regex": [
+      "Plotly\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "handsontable": {
+    "regex": [
+      "Handsontable v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "datatables": {
+    "regex": [
+      "DataTables? v?([0-9A-Za-z.+-]+)",
+      "version:\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "tabulator": {
+    "regex": [
+      "Tabulator v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "aggrid": {
+    "regex": [
+      "ag-Grid v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "handsontable-pro": {
+    "regex": [
+      "Handsontable Pro v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "select2": {
+    "regex": [
+      "Select2 v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "chosen": {
+    "regex": [
+      "Chosen v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "typeaheadjs": {
+    "regex": [
+      "Typeahead\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "awesomplete": {
+    "regex": [
+      "Awesomplete v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "fusejs": {
+    "regex": [
+      "Fuse\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "lunrjs": {
+    "regex": [
+      "lunr\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "markjs": {
+    "regex": [
+      "markVersion\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "highlightjs": {
+    "regex": [
+      "highlight\\.js v?([0-9A-Za-z.+-]+)",
+      "hljs\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "prismjs": {
+    "regex": [
+      "Prism v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "mathjax": {
+    "regex": [
+      "MathJax v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "katex": {
+    "regex": [
+      "KaTeX v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "sortablejs": {
+    "regex": [
+      "Sortable v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "packery": {
+    "regex": [
+      "Packery v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "isotope": {
+    "regex": [
+      "Isotope v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "masonry": {
+    "regex": [
+      "Masonry v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "flickity": {
+    "regex": [
+      "Flickity v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "gsap": {
+    "regex": [
+      "GSAP v?([0-9A-Za-z.+-]+)",
+      "GreenSock v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "scrollmagic": {
+    "regex": [
+      "ScrollMagic v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "locomotive-scroll": {
+    "regex": [
+      "LocomotiveScroll v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "smoothscroll": {
+    "regex": [
+      "SmoothScroll v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "parallaxjs": {
+    "regex": [
+      "Parallax v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "videojs": {
+    "regex": [
+      "videojs\\.VERSION\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "plyr": {
+    "regex": [
+      "Plyr v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "howlerjs": {
+    "regex": [
+      "Howler\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "wavesurferjs": {
+    "regex": [
+      "WaveSurfer v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "soundjs": {
+    "regex": [
+      "SoundJS v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "anime": {
+    "regex": [
+      "anime\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "tweenjs": {
+    "regex": [
+      "TweenJS v?([0-9A-Za-z.+-]+)"
+    ]
+  }
+}

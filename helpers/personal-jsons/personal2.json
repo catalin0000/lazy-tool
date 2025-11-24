@@ -1,0 +1,206 @@
+{
+  "momentjs": {
+    "regex": [
+      "Moment\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]",
+      "moment\\.version\\s*['\"]?[:=]\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "luxon": {
+    "regex": [
+      "luxonVersion\\s*[:=]\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "dayjs": {
+    "regex": [
+      "dayjs\\(['\"]([0-9A-Za-z.+-]+)['\"]\\)",
+      "Dayjs\\s+v?([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "underscore": {
+    "regex": [
+      "Underscore\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "lodash": {
+    "regex": [
+      "lodash\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]",
+      "Lodash\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "backbone": {
+    "regex": [
+      "Backbone\\.VERSION\\s*=\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "marionette": {
+    "regex": [
+      "Marionette\\.VERSION\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "knockout": {
+    "regex": [
+      "version\\s*:\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "rivets": {
+    "regex": [
+      "rivets\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "mithril": {
+    "regex": [
+      "m\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "alpinejs": {
+    "regex": [
+      "Alpine\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "htmx": {
+    "regex": [
+      "htmx\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "stimulus": {
+    "regex": [
+      "Stimulus\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "preact": {
+    "regex": [
+      "preactVersion\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "ember": {
+    "regex": [
+      "Ember\\.VERSION['\"]?\\s*[:=]\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "polymer": {
+    "regex": [
+      "Polymer\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "svelte": {
+    "regex": [
+      "svelteVersion\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "inferno": {
+    "regex": [
+      "Inferno\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "zepto": {
+    "regex": [
+      "Zepto\\.version\\s*=['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "yui": {
+    "regex": [
+      "YUI\\s*['\"]?version['\"]?\\s*[:=]\\s*['\"]([0-9.]+)['\"]"
+    ]
+  },
+  "dojo": {
+    "regex": [
+      "dojo\\.version\\s*=\\s*\\{\\s*major:\\s*([0-9]+),\\s*minor:\\s*([0-9]+)"
+    ]
+  },
+  "threejs": {
+    "regex": [
+      "REVISION\\s*=\\s*([0-9]+)"
+    ]
+  },
+  "babylonjs": {
+    "regex": [
+      "BABYLON\\.Engine\\.Version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "p5js": {
+    "regex": [
+      "p5Version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "paperjs": {
+    "regex": [
+      "paperVersion\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "fabricjs": {
+    "regex": [
+      "fabric\\.version\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "pixi": {
+    "regex": [
+      "PIXI\\.VERSION\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "phaser": {
+    "regex": [
+      "Phaser\\.VERSION\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "animejs": {
+    "regex": [
+      "animeVersion\\s*=['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "velocityjs": {
+    "regex": [
+      "Velocity\\.version\\s*=\\s*['\"]([0-9A-Za-z.+-]+)['\"]"
+    ]
+  },
+  "tailwindcss": {
+    "regex": [
+      "/\\*!?\\s*tailwindcss v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "bootstrap": {
+    "regex": [
+      "Bootstrap v([0-9A-Za-z.+-]+)",
+      "/\\*!?\\s*bootstrap v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "materialize": {
+    "regex": [
+      "Materialize v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "semanticui": {
+    "regex": [
+      "Semantic UI ([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "uikit": {
+    "regex": [
+      "UIkit version ([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "metro-ui": {
+    "regex": [
+      "Metro UI.*version ([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "purecss": {
+    "regex": [
+      "Pure v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "swiper": {
+    "regex": [
+      "Swiper v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "slick-carousel": {
+    "regex": [
+      "Slick v([0-9A-Za-z.+-]+)"
+    ]
+  },
+  "fullpagejs": {
+    "regex": [
+      "fullPage\\.js ([0-9A-Za-z.+-]+)"
+    ]
+  }
+}
