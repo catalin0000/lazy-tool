@@ -10,18 +10,211 @@ import paramiko
 from paramiko.config import SSHConfig
 import ipaddress
 import xml.etree.ElementTree as ET
-
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
 
 nmap_results = {}
 
-def create_tests():
+
+def check_http(ip, port):
+    target = f"{ip}:{port}"
+    cmd = ["httpx", "-silent", "-fr", "-u", target]
+    run = subprocess.run(cmd, capture_output=True, text=True)
+    out = run.stdout.strip()
+    if out:
+        return out
+
+    return None
+
+
+                
+
+def create_tests(args):
+    create_local_dir = ['mkdir', f'parsed-nmap-checks']
+    create = subprocess.run(create_local_dir, capture_output=True, text=True)
+
+
+    main_dic ={
+        'main_file' : ['#!/bin/bash'],
+        'ssl_file' : ['#!/bin/bash'],
+        'ssh_file' : ['#!/bin/bash'],
+        'httpx_file' : ['#!/bin/bash'],
+        'http_file' : ['#!/bin/bash'],
+        'https_file' : ['#!/bin/bash'],
+        'httpx_http_file' : ['#!/bin/bash'],
+        'httpx_https_file' : ['#!/bin/bash']
+    }
+    
+    main_file = ['#!/bin/bash']
+    ssl_file = ['#!/bin/bash']
+    ssh_file = ['#!/bin/bash']
+    httpx_file = ['#!/bin/bash']
+    http_file = ['#!/bin/bash']
+    https_file = ['#!/bin/bash']
+    httpx_http_file = ['#!/bin/bash']
+    httpx_https_file = ['#!/bin/bash']
+
+    tools = ['nuclei', 'gobuster', 'nikto', 'ssh-audit', 'testssl', 'sslscan', 'gowitness', 'httpx - projectdiscovery one!!! not python-httpx library!']
+
+    # dirs = ['mkdir htt']
+
+    targets = []
+
+    results = []
+
+    if not args:
+        for ip, ports in nmap_results.items():
+            for p in ports:
+                if p["state"] == "open":
+                    targets.append((ip, p["port"]))
+
+        with ThreadPoolExecutor(max_workers=50) as pool:
+            futures = [pool.submit(check_http, ip, port) for ip, port in targets]
+
+            for f in as_completed(futures):
+                r = f.result()
+                if r:
+                    if r not in results:
+                        results.append(r)
+
+    for item in results:
+        if item.startswith('http://'):
+            p = urlparse(item)
+            ip = p.hostname
+            port = p.port
+
+            if 'mkdir httpx_http_checks' not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append('mkdir httpx_http_checks')
+            if 'mkdir httpx_http_checks/nuclei' not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append('mkdir httpx_http_checks/nuclei')
+
+            cmd = f"nuclei -u {item} -o httpx_http_checks/nuclei/{ip}.{port}.nuclei"
+            if cmd not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append(cmd)
+            if 'mkdir httpx_http_checks/gobuster' not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append('mkdir httpx_http_checks/gobuster')
+            cmd = f"gobuster dir -k -u {item} -w /repos/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt -o httpx_http_checks/gobuster/{ip}.{port}.gobuster"
+            if cmd not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append(cmd)
+            if 'mkdir httpx_http_checks/nikto' not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append('mkdir httpx_http_checks/nikto')
+            cmd = f"nikto -h {item} -output httpx_http_checks/nikto/{ip}.{port}.nikto"
+            if cmd not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append(cmd)
+            cmd = f"gowitness scan single -u {item} -s httpx_http_checks/gowitness"
+            if cmd not in main_dic['httpx_http_file']:
+                main_dic['httpx_http_file'].append(cmd)
+
+            
+            
+        if item.startswith('https://'):
+            p = urlparse(item)
+            ip = p.hostname
+            port = p.port
+
+
+            if 'mkdir httpx_http_checks' not in main_dic['httpx_https_file']:
+                main_dic['httpx_https_file'].append('mkdir httpx_https_checks')
+
+            if 'mkdir httpx_http_checks/nuclei' not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append('mkdir httpx_http_checks/nuclei')
+
+            cmd = f"nuclei -u {item} -o httpx_https_checks/nuclei/{ip}.{port}.nuclei"
+            if cmd not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append(cmd)
+            if 'mkdir httpx_https_checks/gobuster' not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append('mkdir httpx_https_checks/gobuster')
+            cmd = f"gobuster dir -k -u {item} -w /repos/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt -o httpx_https_checks/gobuster/{ip}.{port}.gobuster"
+            if cmd not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append(cmd)
+            if 'mkdir httpx_https_checks/nikto' not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append('mkdir httpx_https_checks/nikto')
+            cmd = f"nikto -h {item} -output httpx_https_checks/nikto/{ip}.{port}.nikto"
+            if cmd not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append(cmd)
+            cmd = f"gowitness scan single -u {item} -s httpx_https_checks/gowitness"
+            if cmd not in  main_dic['httpx_https_file']:
+                 main_dic['httpx_https_file'].append(cmd)
+
+
+            if 'mkdir testssl' not in main_dic['main_file']:
+                main_dic['main_file'].append('mkdir testssl')
+            if 'mkdir testssl' not in main_dic['ssl_file']:
+                main_dic['ssl_file'].append('mkdir testssl')
+            cmd = f"testssl -oJ testssl/{ip}.{port}.json {ip}:{port}"
+            if cmd not in main_dic['main_file']:
+                main_dic['main_file'].append(cmd)
+            if cmd not in main_dic['ssl_file']:
+                main_dic['ssl_file'].append(cmd)
+
+            
 
     for ip,ports in nmap_results.items():
         for port in ports:
             if port['state'] == 'open':
-                # print(ip, port)
+           
                 if port['tunnel'] == 'ssl':
-                    print(f"testssl -oJ testssl/{ip}.{port['port']}.json {ip}:{port['port']} ")
+                    if f'https://{ip}:{port["port"]}' not in results:   
+                        if 'mkdir testssl' not in main_dic['main_file']:
+                            main_dic['main_file'].append('mkdir testssl')
+                        if 'mkdir testssl' not in main_dic['ssl_file']:
+                            main_dic['ssl_file'].append('mkdir testssl')
+                        cmd = f"testssl -oJ testssl/{ip}.{port['port']}.json {ip}:{port['port']}"
+                        if cmd not in main_dic['main_file']:
+                            main_dic['main_file'].append(cmd)
+                        if cmd not in main_dic['ssl_file']:
+                            main_dic['ssl_file'].append(cmd)
+
+                if 'ssh' in port['serv_name']:
+                    if 'mkdir ssh-audit' not in main_dic['main_file']:
+                        main_dic['main_file'].append('mkdir ssh-audit')
+                    if 'mkdir ssh-audit' not in main_dic['ssh_file']:
+                        main_dic['ssh_file'].append('mkdir ssh-audit')
+                    
+                    cmd1 = f"ssh-audit -jj {ip}:{port['port']} > ssh-audit/{ip}.{port['port']}.json"
+                    if cmd1 not in main_dic['main_file']:
+                        main_dic['main_file'].append(cmd)
+                    if cmd1 not in main_dic['ssh_file']:
+                        main_dic['ssh_file'].append(cmd)
+
+
+                if 'http' in port['serv_name']:
+                    if 'mkdir httpx' not in main_dic['main_file']:
+                        main_dic['main_file'].append('mkdir httpx')
+                    if 'mkdir httpx' not in main_dic['httpx_file']:
+                        main_dic['httpx_file'].append('mkdir httpx')
+
+                    cmd = f"httpx -location -j -cdn -irh -fr -sc -cl -ct -title -server -td -ip -cname -include-chain -probe -o httpx/{ip}.{port['port']}.json  -u {ip}:{port['port']}"
+                    if cmd not in main_dic['main_file']:
+                        main_dic['main_file'].append(cmd)
+                    if cmd not in main_dic['httpx_file']:
+                        main_dic['httpx_file'].append(cmd)
+
+    for key in main_dic:
+        with open(f'parsed-nmap-checks/{key}.sh', 'w') as f:
+            if len(main_dic[key]) > 1:
+                for cmd in main_dic[key]:
+                    f.write(cmd+'\n')
+
+                
+
+
+
+#     with open('parsed-nmap-checks/main_file.sh', 'a') as f:
+#         for cmd in main_file:
+#             f.write(cmd+'\n')
+# 
+#     with open('parsed-nmap-checks/ssl_file.sh', 'a') as f:
+#         for cmd in ssl_file:
+#             f.write(cmd+'\n')
+#     
+#     with open('parsed-nmap-checks/ssh_file.sh', 'a') as f:
+#         for cmd in ssh_file:
+#             f.write(cmd+'\n')
+# 
+#     with open('parsed-nmap-checks/httpx_file.sh', 'a') as f:
+#         for cmd in httpx_file:
+#             f.write(cmd+'\n')
 
 
 
@@ -37,10 +230,10 @@ def parse_file(path):
                 state = port.find('state').get('state')           
                 if state == 'open' or state == 'closed':
                     if host.find('address').get('addr') not in nmap_results :
-                        nmap_results[ip] = []
+                        nmap_results[ip] = []                 
                     nmap_results[ip].append({'port':port.get('portid'), 'protocol': port.get('protocol'), 'state': state, 'serv_name': svc.get('name') if svc is not None else None, 'serv_conf': svc.get('conf') if svc is not None else None, 'tunnel': svc.get('tunnel') if svc is not None else None })
 
-def parse_nmaps(path):
+def parse_nmaps(path, args):
     if os.path.isfile(path):
         parse_file(path)
     elif os.path.isdir(path):
@@ -49,7 +242,7 @@ def parse_nmaps(path):
             file_path = os.path.join(path, filename)
             if os.path.isfile(file_path) and file_path.endswith('.xml'):
                 parse_file(file_path)
-    create_tests()
+    create_tests(args)
 
 # Cache for open connections
 _ssh_connections = {}
@@ -934,7 +1127,7 @@ def is_tool_installed(tool):
         return False
     
 def main():
-    parser = argparse.ArgumentParser(description="Run nmap scan in tmux on remote host")
+    parser = argparse.ArgumentParser(description="This has turned into a big tool......")
     subparsers = parser.add_subparsers(dest="mode", required=True, help="Select a mode")
 
     launch_parser = subparsers.add_parser("network-scans", help="Launch scans mode")
@@ -942,10 +1135,10 @@ def main():
     launch_parser.add_argument("-live", required=False, action=argparse.BooleanOptionalAction, help="Use this one if you want to scan only live hosts. Using arp-scan")
     launch_parser.add_argument("-printonly", required=False, action=argparse.BooleanOptionalAction, help="Use this if you only want the scans to be printed and not started.")
 
-    monitor_parser = subparsers.add_parser("monitor-scans", help="Monitor scans mode")
+    monitor_parser = subparsers.add_parser("monitor-scans", help="Monitor scans mode - this is probably broken now.")
     monitor_parser.add_argument("config_file", help="Path to YAML configuration file")
     
-    results_parser = subparsers.add_parser("scan-results", help="Show scan results")
+    results_parser = subparsers.add_parser("scan-results", help="Show scan results - this prob broken too.")
     results_parser.add_argument("config_file", help="Path to YAML configuration file")
 
     
@@ -975,8 +1168,9 @@ def main():
     pasaudit_parser.add_argument("-domain", "-d", required=True, help="target domain. Example: marvel.local")
     pasaudit_parser.add_argument("-verbose", "-v", required=False, action=argparse.BooleanOptionalAction, help="Verbose output. You will see each running command and it's output.")
     
-    parse_parser = subparsers.add_parser("parse", help="Parse nmap output. - Not ready yet. It does nothing :).")
-    parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.  Not ready yet. It does nothing :).")
+    parse_parser = subparsers.add_parser("parse", help="Parse nmap output. It will parse the output and create a directory with files that contain commands to run against the open services.")
+    parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
+    parse_parser.add_argument("--no-http-check", "-nhc", required=False, action=argparse.BooleanOptionalAction, help="By default it checks each port with httpx to see if it's a web server or not which WILL TAKE TIME. If you don't want that and want to rely on nmap only then  use this argument.")
 
     args = parser.parse_args()
 
@@ -1037,7 +1231,7 @@ def main():
             pas_audit(args.dc_ip, args.user, args.password, args.domain)
 
     if args.mode == 'parse' :
-        parse_nmaps(args.nmap_output)        
+        parse_nmaps(args.nmap_output, args.no_http_check)        
 
 
         # print(json_nmaps)        
