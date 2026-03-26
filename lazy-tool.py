@@ -173,9 +173,9 @@ def create_tests(args):
                     
                     cmd1 = f"ssh-audit -jj {ip}:{port['port']} > ssh-audit/{ip}.{port['port']}.json"
                     if cmd1 not in main_dic['main_file']:
-                        main_dic['main_file'].append(cmd)
+                        main_dic['main_file'].append(cmd1)
                     if cmd1 not in main_dic['ssh_file']:
-                        main_dic['ssh_file'].append(cmd)
+                        main_dic['ssh_file'].append(cmd1)
 
 
                 if 'http' in port['serv_name']:
