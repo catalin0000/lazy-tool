@@ -1170,7 +1170,7 @@ def main():
     
     parse_parser = subparsers.add_parser("parse", help="Parse nmap output. It will parse the output and create a directory with files that contain commands to run against the open services.")
     parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
-    parse_parser.add_argument("--no-http-check", "-nhc", required=False, action=argparse.BooleanOptionalAction, help="By default it checks each port with httpx to see if it's a web server or not which WILL TAKE TIME. If you don't want that and want to rely on nmap only then  use this argument.")
+    # parse_parser.add_argument("--no-httpcheck", "-nhc", required=False, action=argparse.BooleanOptionalAction, help="By default it checks each port with httpx to see if it's a web server or not which WILL TAKE TIME. If you don't want that and want to rely on nmap only then  use this argument.")
 
     args = parser.parse_args()
 
