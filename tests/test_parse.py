@@ -473,3 +473,10 @@ def test_parse_nmaps_with_check_tools(single_host_path, capsys):
     assert len(results) > 0
     captured = capsys.readouterr()
     assert 'Required Tools:' in captured.out
+
+
+def test_parse_nmaps_filters_local_ip(single_host_path):
+    from helpers.process_results import parse_nmaps
+    results = parse_nmaps(single_host_path, no_http_check=True, local_ip='192.168.1.10')
+    ips = {ip for ip, _, _ in results}
+    assert '192.168.1.10' not in ips

@@ -56,6 +56,7 @@ def main():
     parse_parser.add_argument("--no-http-check", "-nhc", required=False, action="store_true", help="Skip HTTP probing with httpx.")
     parse_parser.add_argument("--seclists-path", "-sp", required=False, default=None, help="Path to SecLists directory (wordlist paths resolved relative to it).")
     parse_parser.add_argument("--check-tools", "-ct", required=False, action="store_true", help="Check which required tools are installed.")
+    parse_parser.add_argument("--local-ip", "-li", required=False, default=None, help="Local machine IP to exclude from generated checks (auto-detected if omitted).")
 
     args = parser.parse_args()
 
@@ -103,7 +104,7 @@ def main():
             pas_audit(args.dc_ip, args.user, args.password, args.domain)
 
     if args.mode == 'parse':
-        parse_nmaps(args.nmap_output, no_http_check=args.no_http_check, seclists_path=args.seclists_path, check_tools=args.check_tools)
+        parse_nmaps(args.nmap_output, no_http_check=args.no_http_check, seclists_path=args.seclists_path, check_tools=args.check_tools, local_ip=args.local_ip)
 
     close_all_ssh_connections()
 

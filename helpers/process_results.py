@@ -212,10 +212,10 @@ def _add_category_check(scripts, category, ip, port, cmd, mkdir_dir):
 def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
     """Write service-specific shell scripts (parsed-nmap-checks/*.sh) for all discovered services."""
     if seclists_path is None:
-        gobuster_wordlist = '/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt'
+        gobuster_wordlist = '/usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt'
         smtp_wordlist = '/usr/share/seclists/Usernames/top-usernames-shortlist.txt'
     else:
-        gobuster_wordlist = f'{seclists_path}/Discovery/Web-Content/directory-list-2.3-medium.txt'
+        gobuster_wordlist = f'{seclists_path}/Discovery/Web-Content/raft-medium-directories.txt'
         smtp_wordlist = f'{seclists_path}/Usernames/top-usernames-shortlist.txt'
 
     output_dir = 'parsed-nmap-checks'
@@ -542,7 +542,20 @@ def print_tools_table(tool_names):
     print()
 
 
-def parse_nmaps(nmap_output, no_http_check=False, seclists_path=None, check_tools=False):
+def get_local_ips():
+    """Return a set of local IP addresses to exclude from generated checks."""
+    ips = {'127.0.0.1', '::1', 'localhost'}
+    try:
+        result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+        if result.returncode == 0:
+            for ip in result.stdout.strip().split():
+                ips.add(ip)
+    except:
+        pass
+    return ips
+
+
+def parse_nmaps(nmap_output, no_http_check=False, seclists_path=None, check_tools=False, local_ip=None):
     """Main entry point: parse Nmap XML, generate enumeration scripts, optionally check tools."""
     all_results = []
 
@@ -553,6 +566,10 @@ def parse_nmaps(nmap_output, no_http_check=False, seclists_path=None, check_tool
             file_path = os.path.join(nmap_output, filename)
             if os.path.isfile(file_path) and filename.endswith('.xml'):
                 all_results.extend(parse_file(file_path))
+
+    # Exclude local machine IPs so we don't generate tests against ourselves
+    local_ips = {local_ip} if local_ip else get_local_ips()
+    all_results = [r for r in all_results if r[0] not in local_ips]
 
     http_urls = [] if no_http_check else probe_http_services(all_results)
 
