@@ -1,0 +1,29 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+venv/
+env/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Tool output
+parsed-nmap-checks/

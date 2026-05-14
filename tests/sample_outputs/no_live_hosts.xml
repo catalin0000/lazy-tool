@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun PUBLIC "-//IDN nmap.org//DTD Nmap XML 1.04//EN" "https://svn.nmap.org/nmap/docs/nmaprun.dtd">
+<nmaprun scanner="nmap" args="nmap -sS -oX down.xml 10.0.0.200" start="1234567890" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="1000" services="1-1000"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1234567890" endtime="1234567899">
+  <status state="down" reason="no-response" reason_ttl="0"/>
+  <address addr="10.0.0.200" addrtype="ipv4"/>
+  <hostnames>
+    <hostname name="offline-host.internal" type="PTR"/>
+  </hostnames>
+  <ports>
+    <port protocol="tcp" portid="22">
+      <state state="filtered" reason="no-response" reason_ttl="0"/>
+      <service name="ssh" method="table" conf="3"/>
+    </port>
+  </ports>
+</host>
+</nmaprun>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun PUBLIC "-//IDN nmap.org//DTD Nmap XML 1.04//EN" "https://svn.nmap.org/nmap/docs/nmaprun.dtd">
+<nmaprun scanner="nmap" args="nmap -sS -oX filtered.xml 10.0.0.99" start="1234567890" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="1000" services="1-1000"/>
+<verbose level="0"/>
+<debugging level="0"/>
+<host starttime="1234567890" endtime="1234567899">
+  <status state="up" reason="syn-ack" reason_ttl="0"/>
+  <address addr="10.0.0.99" addrtype="ipv4"/>
+  <hostnames>
+    <hostname name="filtered-host.internal" type="PTR"/>
+  </hostnames>
+  <ports>
+    <port protocol="tcp" portid="22">
+      <state state="filtered" reason="no-response" reason_ttl="0"/>
+      <service name="ssh" method="table" conf="3"/>
+    </port>
+    <port protocol="tcp" portid="80">
+      <state state="filtered" reason="no-response" reason_ttl="0"/>
+      <service name="http" method="table" conf="3"/>
+    </port>
+    <port protocol="tcp" portid="443">
+      <state state="filtered" reason="no-response" reason_ttl="0"/>
+      <service name="https" method="table" conf="3"/>
+    </port>
+    <port protocol="tcp" portid="8080">
+      <state state="closed" reason="reset" reason_ttl="0"/>
+      <service name="http-proxy" method="table" conf="3"/>
+    </port>
+  </ports>
+</host>
+</nmaprun>

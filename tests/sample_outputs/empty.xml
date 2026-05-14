@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun PUBLIC "-//IDN nmap.org//DTD Nmap XML 1.04//EN" "https://svn.nmap.org/nmap/docs/nmaprun.dtd">
+<nmaprun scanner="nmap" args="nmap -sS -oX empty.xml 10.0.0.0/28" start="1234567890" version="7.95" xmloutputversion="1.05">
+<scaninfo type="syn" protocol="tcp" numservices="1000" services="1-1000"/>
+<verbose level="0"/>
+<debugging level="0"/>
+</nmaprun>
