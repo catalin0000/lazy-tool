@@ -195,11 +195,11 @@ def test_generate_scripts_permissions(clean_output_dir, single_host_results):
 
 def test_generate_custom_seclists(clean_output_dir, single_host_results):
     http_urls = ['http://192.168.1.10:80']
-    custom_path = '/custom/seclists/path.txt'
-    generate_test_scripts(single_host_results, http_urls=http_urls, seclists_path=custom_path)
+    custom_dir = '/custom/seclists'
+    generate_test_scripts(single_host_results, http_urls=http_urls, seclists_path=custom_dir)
     with open('parsed-nmap-checks/web.sh') as f:
         content = f.read()
-    assert custom_path in content
+    assert f'{custom_dir}/Discovery/Web-Content/directory-list-2.3-medium.txt' in content
 
 
 def test_generate_no_duplicate_mkdirs(clean_output_dir, single_host_results):

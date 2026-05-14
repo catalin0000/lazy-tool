@@ -212,7 +212,11 @@ def _add_category_check(scripts, category, ip, port, cmd, mkdir_dir):
 def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
     """Write service-specific shell scripts (parsed-nmap-checks/*.sh) for all discovered services."""
     if seclists_path is None:
-        seclists_path = '/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt'
+        gobuster_wordlist = '/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt'
+        smtp_wordlist = '/usr/share/seclists/Usernames/top-usernames-shortlist.txt'
+    else:
+        gobuster_wordlist = f'{seclists_path}/Discovery/Web-Content/directory-list-2.3-medium.txt'
+        smtp_wordlist = f'{seclists_path}/Usernames/top-usernames-shortlist.txt'
 
     output_dir = 'parsed-nmap-checks'
     os.makedirs(output_dir, exist_ok=True)
@@ -254,8 +258,8 @@ def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
 
         _add_unique(scripts['web'], f"nuclei -u {url} -o web_checks/nuclei/{ip}.{port}.nuclei")
         _add_unique(scripts['main'], f"nuclei -u {url} -o web_checks/nuclei/{ip}.{port}.nuclei")
-        _add_unique(scripts['web'], f"gobuster dir -k -u {url} -w {seclists_path} -o web_checks/gobuster/{ip}.{port}.gobuster")
-        _add_unique(scripts['main'], f"gobuster dir -k -u {url} -w {seclists_path} -o web_checks/gobuster/{ip}.{port}.gobuster")
+        _add_unique(scripts['web'], f"gobuster dir -k -u {url} -w {gobuster_wordlist} -o web_checks/gobuster/{ip}.{port}.gobuster")
+        _add_unique(scripts['main'], f"gobuster dir -k -u {url} -w {gobuster_wordlist} -o web_checks/gobuster/{ip}.{port}.gobuster")
         _add_unique(scripts['web'], f"nikto -h {url} -output web_checks/nikto/{ip}.{port}.nikto")
         _add_unique(scripts['main'], f"nikto -h {url} -output web_checks/nikto/{ip}.{port}.nikto")
         _add_unique(scripts['web'], f"gowitness scan single -u {url} -s web_checks/gowitness")
@@ -447,7 +451,7 @@ def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
                 )
                 _add_tool_commands(
                     scripts, 'smtp', ip, port,
-                    f"smtp-user-enum -M VRFY -U /usr/share/seclists/Usernames/top-usernames-shortlist.txt -t {ip} > smtp_checks/{ip}.{port}.vrfy.txt 2>&1",
+                    f"smtp-user-enum -M VRFY -U {smtp_wordlist} -t {ip} > smtp_checks/{ip}.{port}.vrfy.txt 2>&1",
                     'smtp_checks'
                 )
 

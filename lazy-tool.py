@@ -54,7 +54,7 @@ def main():
     parse_parser = subparsers.add_parser("parse", help="Parse nmap output. It will parse the output and create a directory with files that contain commands to run against the open services.")
     parse_parser.add_argument("--nmap-output", "-n", required=True, help="Path to nmap output directory or file.")
     parse_parser.add_argument("--no-http-check", "-nhc", required=False, action="store_true", help="Skip HTTP probing with httpx.")
-    parse_parser.add_argument("--seclists-path", "-sp", required=False, default=None, help="Path to SecLists directory for wordlists.")
+    parse_parser.add_argument("--seclists-path", "-sp", required=False, default=None, help="Path to SecLists directory (wordlist paths resolved relative to it).")
     parse_parser.add_argument("--check-tools", "-ct", required=False, action="store_true", help="Check which required tools are installed.")
 
     args = parser.parse_args()
