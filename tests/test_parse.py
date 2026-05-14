@@ -424,11 +424,23 @@ def test_gather_required_tools_extra(extra_services_path):
 def test_gather_required_tools_web_assessment(single_host_path):
     from helpers.process_results import gather_required_tools, parse_file
     results = parse_file(single_host_path)
-    tools = gather_required_tools(results, no_http_check=True)
+    tools = gather_required_tools(results)
     assert 'nuclei' in tools
     assert 'gobuster' in tools
     assert 'nikto' in tools
     assert 'gowitness' in tools
+
+
+def test_gather_required_tools_no_http_skips_web_tools(single_host_path):
+    from helpers.process_results import gather_required_tools, parse_file
+    results = parse_file(single_host_path)
+    tools = gather_required_tools(results, no_http_check=True)
+    assert 'httpx' in tools
+    assert 'testssl' in tools
+    assert 'nuclei' not in tools
+    assert 'gobuster' not in tools
+    assert 'nikto' not in tools
+    assert 'gowitness' not in tools
 
 
 def test_gather_required_tools_ssl_tunnel(ssl_wrapped_path):

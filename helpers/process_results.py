@@ -90,7 +90,10 @@ def check_http(ip, port):
     """Probe a HTTP service with httpx and return the discovered URL, or None."""
     target = f"{ip}:{port}"
     cmd = ["httpx", "-silent", "-fr", "-u", target]
-    run = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        run = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
     out = run.stdout.strip()
     if out:
         return out
@@ -160,6 +163,9 @@ def parse_file(file_path):
 
 def probe_http_services(parsed_results):
     """Concurrently probe discovered web services with httpx and return a list of URLs."""
+    if not shutil.which('httpx'):
+        return []
+
     targets = [
         (ip, info['port'])
         for ip, info, _ in parsed_results
@@ -206,7 +212,7 @@ def _add_category_check(scripts, category, ip, port, cmd, mkdir_dir):
 def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
     """Write service-specific shell scripts (parsed-nmap-checks/*.sh) for all discovered services."""
     if seclists_path is None:
-        seclists_path = '/repos/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt'
+        seclists_path = '/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt'
 
     output_dir = 'parsed-nmap-checks'
     os.makedirs(output_dir, exist_ok=True)
@@ -507,7 +513,9 @@ def gather_required_tools(parsed_results, no_http_check=False):
         tools.add('testssl')
 
     if 'web' in categories:
-        tools.update(['nuclei', 'gobuster', 'nikto', 'gowitness', 'testssl'])
+        if not no_http_check:
+            tools.update(['nuclei', 'gobuster', 'nikto', 'gowitness'])
+        tools.add('testssl')
 
     return tools
 
