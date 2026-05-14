@@ -247,7 +247,7 @@ def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
     for url in http_urls:
         parsed = urlparse(url)
         ip = parsed.hostname
-        port = parsed.port
+        port = parsed.port or (443 if parsed.scheme == 'https' else 80)
 
         _ensure_mkdir(scripts['web'], 'web_checks')
         _ensure_mkdir(scripts['main'], 'web_checks')
@@ -287,22 +287,6 @@ def generate_test_scripts(parsed_results, http_urls=None, seclists_path=None):
             category = info['category']
             tunnel = info.get('tunnel')
             serv_name = (info['serv_name'] or '').lower()
-
-            # Web services detected by nmap
-            if category == 'web':
-                _add_tool_commands(
-                    scripts, 'web', ip, port,
-                    f"httpx -location -j -cdn -irh -fr -sc -cl -ct -title -server -td -ip -cname -include-chain -probe -o httpx/{ip}.{port}.json -u {ip}:{port}",
-                    'httpx'
-                )
-
-            # SSL/TLS
-            if category == 'tls' or tunnel == 'ssl':
-                _add_tool_commands(
-                    scripts, 'web', ip, port,
-                    f"testssl -oJ testssl/{ip}.{port}.json {ip}:{port}",
-                    'testssl'
-                )
 
             # SSH
             if category == 'ssh':

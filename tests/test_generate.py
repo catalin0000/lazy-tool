@@ -59,15 +59,9 @@ def test_generate_main_has_ssh_audit(clean_output_dir, single_host_results):
     assert 'ssh-audit' in content
 
 
-def test_generate_main_has_httpx(clean_output_dir, single_host_results):
-    generate_test_scripts(single_host_results, http_urls=None)
-    with open('parsed-nmap-checks/main.sh') as f:
-        content = f.read()
-    assert 'httpx' in content
-
-
 def test_generate_main_has_testssl(clean_output_dir, single_host_results):
-    generate_test_scripts(single_host_results, http_urls=None)
+    http_urls = ['https://192.168.1.10:443']
+    generate_test_scripts(single_host_results, http_urls=http_urls)
     with open('parsed-nmap-checks/main.sh') as f:
         content = f.read()
     assert 'testssl' in content
@@ -81,16 +75,9 @@ def test_generate_ssh_has_ssh_audit(clean_output_dir, single_host_results):
     assert '192.168.1.10:22' in content
 
 
-def test_generate_web_has_httpx(clean_output_dir, single_host_results):
-    generate_test_scripts(single_host_results, http_urls=None)
-    with open('parsed-nmap-checks/web.sh') as f:
-        content = f.read()
-    assert 'httpx' in content
-    assert '192.168.1.10:80' in content
-
-
 def test_generate_web_has_testssl(clean_output_dir, single_host_results):
-    generate_test_scripts(single_host_results, http_urls=None)
+    http_urls = ['https://192.168.1.10:443']
+    generate_test_scripts(single_host_results, http_urls=http_urls)
     with open('parsed-nmap-checks/web.sh') as f:
         content = f.read()
     assert 'testssl' in content
